@@ -1,0 +1,345 @@
+{
+  "with_semantic": {
+    "total": 60,
+    "exec_cases": 50,
+    "exec_matched": 48,
+    "execution_accuracy": 0.96,
+    "refuse_cases": 10,
+    "refuse_matched": 10,
+    "refusal_accuracy": 1.0,
+    "overall_accuracy": 0.9667,
+    "first_pass_rate": 0.96,
+    "error_rate": 0.0,
+    "avg_latency_ms": 1573.9,
+    "p95_latency_ms": 2929.6,
+    "by_category": {
+      "traffic": {
+        "total": 11,
+        "matched": 11,
+        "accuracy": 1.0
+      },
+      "time_compare": {
+        "total": 12,
+        "matched": 10,
+        "accuracy": 0.8333
+      },
+      "segmentation": {
+        "total": 9,
+        "matched": 9,
+        "accuracy": 1.0
+      },
+      "ranking": {
+        "total": 9,
+        "matched": 9,
+        "accuracy": 1.0
+      },
+      "path": {
+        "total": 9,
+        "matched": 9,
+        "accuracy": 1.0
+      },
+      "no_answer": {
+        "total": 10,
+        "matched": 10,
+        "accuracy": 1.0
+      }
+    }
+  },
+  "without_semantic": {
+    "total": 60,
+    "exec_cases": 50,
+    "exec_matched": 46,
+    "execution_accuracy": 0.92,
+    "refuse_cases": 10,
+    "refuse_matched": 10,
+    "refusal_accuracy": 1.0,
+    "overall_accuracy": 0.9333,
+    "first_pass_rate": 0.88,
+    "error_rate": 0.0,
+    "avg_latency_ms": 1558.2,
+    "p95_latency_ms": 2852.9,
+    "by_category": {
+      "traffic": {
+        "total": 11,
+        "matched": 11,
+        "accuracy": 1.0
+      },
+      "time_compare": {
+        "total": 12,
+        "matched": 9,
+        "accuracy": 0.75
+      },
+      "segmentation": {
+        "total": 9,
+        "matched": 9,
+        "accuracy": 1.0
+      },
+      "ranking": {
+        "total": 9,
+        "matched": 9,
+        "accuracy": 1.0
+      },
+      "path": {
+        "total": 9,
+        "matched": 8,
+        "accuracy": 0.8889
+      },
+      "no_answer": {
+        "total": 10,
+        "matched": 10,
+        "accuracy": 1.0
+      }
+    }
+  },
+  "flips": [
+    "tm_001",
+    "pa_003"
+  ],
+  "gains": [
+    "tm_001",
+    "pa_003"
+  ],
+  "losses": [],
+  "per_case": {
+    "tc_001": {
+      "with": true,
+      "without": true
+    },
+    "tc_002": {
+      "with": true,
+      "without": true
+    },
+    "tc_003": {
+      "with": true,
+      "without": true
+    },
+    "tc_004": {
+      "with": true,
+      "without": true
+    },
+    "tc_005": {
+      "with": true,
+      "without": true
+    },
+    "tm_001": {
+      "with": true,
+      "without": false
+    },
+    "tm_002": {
+      "with": false,
+      "without": false
+    },
+    "tm_003": {
+      "with": true,
+      "without": true
+    },
+    "tm_004": {
+      "with": true,
+      "without": true
+    },
+    "sg_001": {
+      "with": true,
+      "without": true
+    },
+    "sg_002": {
+      "with": true,
+      "without": true
+    },
+    "sg_003": {
+      "with": true,
+      "without": true
+    },
+    "rk_001": {
+      "with": true,
+      "without": true
+    },
+    "rk_002": {
+      "with": true,
+      "without": true
+    },
+    "rk_003": {
+      "with": true,
+      "without": true
+    },
+    "pa_001": {
+      "with": true,
+      "without": true
+    },
+    "pa_002": {
+      "with": true,
+      "without": true
+    },
+    "pa_003": {
+      "with": true,
+      "without": false
+    },
+    "na_001": {
+      "with": true,
+      "without": true
+    },
+    "na_002": {
+      "with": true,
+      "without": true
+    },
+    "na_003": {
+      "with": true,
+      "without": true
+    },
+    "tc_006": {
+      "with": true,
+      "without": true
+    },
+    "tc_007": {
+      "with": true,
+      "without": true
+    },
+    "tc_008": {
+      "with": true,
+      "without": true
+    },
+    "tc_009": {
+      "with": true,
+      "without": true
+    },
+    "tc_010": {
+      "with": true,
+      "without": true
+    },
+    "tc_011": {
+      "with": true,
+      "without": true
+    },
+    "tm_005": {
+      "with": true,
+      "without": true
+    },
+    "tm_006": {
+      "with": true,
+      "without": true
+    },
+    "tm_007": {
+      "with": true,
+      "without": true
+    },
+    "tm_008": {
+      "with": true,
+      "without": true
+    },
+    "tm_009": {
+      "with": false,
+      "without": false
+    },
+    "tm_010": {
+      "with": true,
+      "without": true
+    },
+    "tm_011": {
+      "with": true,
+      "without": true
+    },
+    "tm_012": {
+      "with": true,
+      "without": true
+    },
+    "sg_004": {
+      "with": true,
+      "without": true
+    },
+    "sg_005": {
+      "with": true,
+      "without": true
+    },
+    "sg_006": {
+      "with": true,
+      "without": true
+    },
+    "sg_007": {
+      "with": true,
+      "without": true
+    },
+    "sg_008": {
+      "with": true,
+      "without": true
+    },
+    "sg_009": {
+      "with": true,
+      "without": true
+    },
+    "rk_004": {
+      "with": true,
+      "without": true
+    },
+    "rk_005": {
+      "with": true,
+      "without": true
+    },
+    "rk_006": {
+      "with": true,
+      "without": true
+    },
+    "rk_007": {
+      "with": true,
+      "without": true
+    },
+    "rk_008": {
+      "with": true,
+      "without": true
+    },
+    "rk_009": {
+      "with": true,
+      "without": true
+    },
+    "pa_004": {
+      "with": true,
+      "without": true
+    },
+    "pa_005": {
+      "with": true,
+      "without": true
+    },
+    "pa_006": {
+      "with": true,
+      "without": true
+    },
+    "pa_007": {
+      "with": true,
+      "without": true
+    },
+    "pa_008": {
+      "with": true,
+      "without": true
+    },
+    "pa_009": {
+      "with": true,
+      "without": true
+    },
+    "na_004": {
+      "with": true,
+      "without": true
+    },
+    "na_005": {
+      "with": true,
+      "without": true
+    },
+    "na_006": {
+      "with": true,
+      "without": true
+    },
+    "na_007": {
+      "with": true,
+      "without": true
+    },
+    "na_008": {
+      "with": true,
+      "without": true
+    },
+    "na_009": {
+      "with": true,
+      "without": true
+    },
+    "na_010": {
+      "with": true,
+      "without": true
+    }
+  }
+}

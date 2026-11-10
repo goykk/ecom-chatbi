@@ -1,0 +1,1170 @@
+{
+  "rounds": [
+    {
+      "total": 200,
+      "exec_cases": 180,
+      "exec_matched": 173,
+      "execution_accuracy": 0.9611,
+      "refuse_cases": 20,
+      "refuse_matched": 20,
+      "refusal_accuracy": 1.0,
+      "overall_accuracy": 0.965,
+      "first_pass_rate": 0.9611,
+      "error_rate": 0.0,
+      "avg_latency_ms": 1700.1,
+      "p95_latency_ms": 3002.3,
+      "by_category": {
+        "traffic": {
+          "total": 40,
+          "matched": 38,
+          "accuracy": 0.95
+        },
+        "time_compare": {
+          "total": 40,
+          "matched": 39,
+          "accuracy": 0.975
+        },
+        "segmentation": {
+          "total": 30,
+          "matched": 29,
+          "accuracy": 0.9667
+        },
+        "ranking": {
+          "total": 40,
+          "matched": 39,
+          "accuracy": 0.975
+        },
+        "path": {
+          "total": 30,
+          "matched": 28,
+          "accuracy": 0.9333
+        },
+        "no_answer": {
+          "total": 20,
+          "matched": 20,
+          "accuracy": 1.0
+        }
+      }
+    },
+    {
+      "total": 200,
+      "exec_cases": 180,
+      "exec_matched": 173,
+      "execution_accuracy": 0.9611,
+      "refuse_cases": 20,
+      "refuse_matched": 20,
+      "refusal_accuracy": 1.0,
+      "overall_accuracy": 0.965,
+      "first_pass_rate": 0.9611,
+      "error_rate": 0.0,
+      "avg_latency_ms": 1740.6,
+      "p95_latency_ms": 3243.6,
+      "by_category": {
+        "traffic": {
+          "total": 40,
+          "matched": 38,
+          "accuracy": 0.95
+        },
+        "time_compare": {
+          "total": 40,
+          "matched": 40,
+          "accuracy": 1.0
+        },
+        "segmentation": {
+          "total": 30,
+          "matched": 29,
+          "accuracy": 0.9667
+        },
+        "ranking": {
+          "total": 40,
+          "matched": 39,
+          "accuracy": 0.975
+        },
+        "path": {
+          "total": 30,
+          "matched": 27,
+          "accuracy": 0.9
+        },
+        "no_answer": {
+          "total": 20,
+          "matched": 20,
+          "accuracy": 1.0
+        }
+      }
+    },
+    {
+      "total": 200,
+      "exec_cases": 180,
+      "exec_matched": 173,
+      "execution_accuracy": 0.9611,
+      "refuse_cases": 20,
+      "refuse_matched": 20,
+      "refusal_accuracy": 1.0,
+      "overall_accuracy": 0.965,
+      "first_pass_rate": 0.9611,
+      "error_rate": 0.0,
+      "avg_latency_ms": 1677.5,
+      "p95_latency_ms": 2804.8,
+      "by_category": {
+        "traffic": {
+          "total": 40,
+          "matched": 38,
+          "accuracy": 0.95
+        },
+        "time_compare": {
+          "total": 40,
+          "matched": 40,
+          "accuracy": 1.0
+        },
+        "segmentation": {
+          "total": 30,
+          "matched": 29,
+          "accuracy": 0.9667
+        },
+        "ranking": {
+          "total": 40,
+          "matched": 39,
+          "accuracy": 0.975
+        },
+        "path": {
+          "total": 30,
+          "matched": 27,
+          "accuracy": 0.9
+        },
+        "no_answer": {
+          "total": 20,
+          "matched": 20,
+          "accuracy": 1.0
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "execution_accuracy": {
+      "mean": 0.9611,
+      "std": 0.0,
+      "min": 0.9611,
+      "max": 0.9611
+    },
+    "refusal_accuracy": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "overall_accuracy": {
+      "mean": 0.965,
+      "std": 0.0,
+      "min": 0.965,
+      "max": 0.965
+    },
+    "latency_ms": {
+      "mean": 1706.0667,
+      "std": 26.1037,
+      "min": 1677.5,
+      "max": 1740.6
+    }
+  },
+  "per_case": {
+    "tc_001": [
+      true,
+      true,
+      true
+    ],
+    "tc_002": [
+      true,
+      true,
+      true
+    ],
+    "tc_003": [
+      true,
+      true,
+      true
+    ],
+    "tc_004": [
+      true,
+      true,
+      true
+    ],
+    "tc_005": [
+      true,
+      true,
+      true
+    ],
+    "tm_001": [
+      true,
+      true,
+      true
+    ],
+    "tm_002": [
+      true,
+      true,
+      true
+    ],
+    "tm_003": [
+      true,
+      true,
+      true
+    ],
+    "tm_004": [
+      true,
+      true,
+      true
+    ],
+    "sg_001": [
+      true,
+      true,
+      true
+    ],
+    "sg_002": [
+      true,
+      true,
+      true
+    ],
+    "sg_003": [
+      true,
+      true,
+      true
+    ],
+    "rk_001": [
+      true,
+      true,
+      true
+    ],
+    "rk_002": [
+      true,
+      true,
+      true
+    ],
+    "rk_003": [
+      true,
+      true,
+      true
+    ],
+    "pa_001": [
+      true,
+      true,
+      true
+    ],
+    "pa_002": [
+      true,
+      true,
+      true
+    ],
+    "pa_003": [
+      true,
+      true,
+      true
+    ],
+    "na_001": [
+      true,
+      true,
+      true
+    ],
+    "na_002": [
+      true,
+      true,
+      true
+    ],
+    "na_003": [
+      true,
+      true,
+      true
+    ],
+    "tc_006": [
+      true,
+      true,
+      true
+    ],
+    "tc_007": [
+      true,
+      true,
+      true
+    ],
+    "tc_008": [
+      true,
+      true,
+      true
+    ],
+    "tc_009": [
+      true,
+      true,
+      true
+    ],
+    "tc_010": [
+      true,
+      true,
+      true
+    ],
+    "tc_011": [
+      true,
+      true,
+      true
+    ],
+    "tm_005": [
+      true,
+      true,
+      true
+    ],
+    "tm_006": [
+      true,
+      true,
+      true
+    ],
+    "tm_007": [
+      true,
+      true,
+      true
+    ],
+    "tm_008": [
+      true,
+      true,
+      true
+    ],
+    "tm_009": [
+      true,
+      true,
+      true
+    ],
+    "tm_010": [
+      true,
+      true,
+      true
+    ],
+    "tm_011": [
+      true,
+      true,
+      true
+    ],
+    "tm_012": [
+      true,
+      true,
+      true
+    ],
+    "sg_004": [
+      true,
+      true,
+      true
+    ],
+    "sg_005": [
+      true,
+      true,
+      true
+    ],
+    "sg_006": [
+      true,
+      true,
+      true
+    ],
+    "sg_007": [
+      true,
+      true,
+      true
+    ],
+    "sg_008": [
+      true,
+      true,
+      true
+    ],
+    "sg_009": [
+      true,
+      true,
+      true
+    ],
+    "rk_004": [
+      true,
+      true,
+      true
+    ],
+    "rk_005": [
+      true,
+      true,
+      true
+    ],
+    "rk_006": [
+      true,
+      true,
+      true
+    ],
+    "rk_007": [
+      true,
+      true,
+      true
+    ],
+    "rk_008": [
+      true,
+      true,
+      true
+    ],
+    "rk_009": [
+      true,
+      true,
+      true
+    ],
+    "pa_004": [
+      true,
+      true,
+      true
+    ],
+    "pa_005": [
+      true,
+      true,
+      true
+    ],
+    "pa_006": [
+      true,
+      true,
+      true
+    ],
+    "pa_007": [
+      true,
+      true,
+      true
+    ],
+    "pa_008": [
+      true,
+      true,
+      true
+    ],
+    "pa_009": [
+      true,
+      true,
+      true
+    ],
+    "na_004": [
+      true,
+      true,
+      true
+    ],
+    "na_005": [
+      true,
+      true,
+      true
+    ],
+    "na_006": [
+      true,
+      true,
+      true
+    ],
+    "na_007": [
+      true,
+      true,
+      true
+    ],
+    "na_008": [
+      true,
+      true,
+      true
+    ],
+    "na_009": [
+      true,
+      true,
+      true
+    ],
+    "na_010": [
+      true,
+      true,
+      true
+    ],
+    "tc_012": [
+      true,
+      true,
+      true
+    ],
+    "tc_013": [
+      true,
+      true,
+      true
+    ],
+    "tc_014": [
+      true,
+      true,
+      true
+    ],
+    "tc_015": [
+      true,
+      true,
+      true
+    ],
+    "tc_016": [
+      true,
+      true,
+      true
+    ],
+    "tc_017": [
+      true,
+      true,
+      true
+    ],
+    "tc_018": [
+      true,
+      true,
+      true
+    ],
+    "tc_019": [
+      true,
+      true,
+      true
+    ],
+    "tc_020": [
+      true,
+      true,
+      true
+    ],
+    "tc_021": [
+      true,
+      true,
+      true
+    ],
+    "tc_022": [
+      true,
+      true,
+      true
+    ],
+    "tc_023": [
+      true,
+      true,
+      true
+    ],
+    "tc_024": [
+      true,
+      true,
+      true
+    ],
+    "tc_025": [
+      true,
+      true,
+      true
+    ],
+    "tc_026": [
+      true,
+      true,
+      true
+    ],
+    "tc_027": [
+      true,
+      true,
+      true
+    ],
+    "tc_028": [
+      true,
+      true,
+      true
+    ],
+    "tc_029": [
+      false,
+      false,
+      false
+    ],
+    "tc_030": [
+      true,
+      true,
+      true
+    ],
+    "tc_031": [
+      true,
+      true,
+      true
+    ],
+    "tc_032": [
+      true,
+      true,
+      true
+    ],
+    "tc_033": [
+      true,
+      true,
+      true
+    ],
+    "tc_034": [
+      true,
+      true,
+      true
+    ],
+    "tc_035": [
+      true,
+      true,
+      true
+    ],
+    "tc_036": [
+      true,
+      true,
+      true
+    ],
+    "tc_037": [
+      true,
+      true,
+      true
+    ],
+    "tc_038": [
+      false,
+      false,
+      false
+    ],
+    "tc_039": [
+      true,
+      true,
+      true
+    ],
+    "tc_040": [
+      true,
+      true,
+      true
+    ],
+    "tm_013": [
+      true,
+      true,
+      true
+    ],
+    "tm_014": [
+      true,
+      true,
+      true
+    ],
+    "tm_015": [
+      true,
+      true,
+      true
+    ],
+    "tm_016": [
+      true,
+      true,
+      true
+    ],
+    "tm_017": [
+      true,
+      true,
+      true
+    ],
+    "tm_018": [
+      true,
+      true,
+      true
+    ],
+    "tm_019": [
+      true,
+      true,
+      true
+    ],
+    "tm_020": [
+      true,
+      true,
+      true
+    ],
+    "tm_021": [
+      true,
+      true,
+      true
+    ],
+    "tm_022": [
+      true,
+      true,
+      true
+    ],
+    "tm_023": [
+      true,
+      true,
+      true
+    ],
+    "tm_024": [
+      true,
+      true,
+      true
+    ],
+    "tm_025": [
+      true,
+      true,
+      true
+    ],
+    "tm_026": [
+      true,
+      true,
+      true
+    ],
+    "tm_027": [
+      true,
+      true,
+      true
+    ],
+    "tm_028": [
+      true,
+      true,
+      true
+    ],
+    "tm_029": [
+      true,
+      true,
+      true
+    ],
+    "tm_030": [
+      true,
+      true,
+      true
+    ],
+    "tm_031": [
+      true,
+      true,
+      true
+    ],
+    "tm_032": [
+      true,
+      true,
+      true
+    ],
+    "tm_033": [
+      true,
+      true,
+      true
+    ],
+    "tm_034": [
+      true,
+      true,
+      true
+    ],
+    "tm_035": [
+      true,
+      true,
+      true
+    ],
+    "tm_036": [
+      true,
+      true,
+      true
+    ],
+    "tm_037": [
+      false,
+      true,
+      true
+    ],
+    "tm_038": [
+      true,
+      true,
+      true
+    ],
+    "tm_039": [
+      true,
+      true,
+      true
+    ],
+    "tm_040": [
+      true,
+      true,
+      true
+    ],
+    "sg_010": [
+      true,
+      true,
+      true
+    ],
+    "sg_011": [
+      true,
+      true,
+      true
+    ],
+    "sg_012": [
+      true,
+      true,
+      true
+    ],
+    "sg_013": [
+      true,
+      true,
+      true
+    ],
+    "sg_014": [
+      true,
+      true,
+      true
+    ],
+    "sg_015": [
+      true,
+      true,
+      true
+    ],
+    "sg_016": [
+      true,
+      true,
+      true
+    ],
+    "sg_017": [
+      true,
+      true,
+      true
+    ],
+    "sg_018": [
+      true,
+      true,
+      true
+    ],
+    "sg_019": [
+      true,
+      true,
+      true
+    ],
+    "sg_020": [
+      false,
+      false,
+      false
+    ],
+    "sg_021": [
+      true,
+      true,
+      true
+    ],
+    "sg_022": [
+      true,
+      true,
+      true
+    ],
+    "sg_023": [
+      true,
+      true,
+      true
+    ],
+    "sg_024": [
+      true,
+      true,
+      true
+    ],
+    "sg_025": [
+      true,
+      true,
+      true
+    ],
+    "sg_026": [
+      true,
+      true,
+      true
+    ],
+    "sg_027": [
+      true,
+      true,
+      true
+    ],
+    "sg_028": [
+      true,
+      true,
+      true
+    ],
+    "sg_029": [
+      true,
+      true,
+      true
+    ],
+    "sg_030": [
+      true,
+      true,
+      true
+    ],
+    "pa_010": [
+      true,
+      true,
+      true
+    ],
+    "pa_011": [
+      true,
+      true,
+      true
+    ],
+    "pa_012": [
+      true,
+      true,
+      true
+    ],
+    "pa_013": [
+      true,
+      true,
+      true
+    ],
+    "pa_014": [
+      true,
+      true,
+      true
+    ],
+    "pa_015": [
+      true,
+      true,
+      true
+    ],
+    "pa_016": [
+      true,
+      true,
+      true
+    ],
+    "pa_017": [
+      true,
+      false,
+      false
+    ],
+    "pa_018": [
+      true,
+      true,
+      true
+    ],
+    "pa_019": [
+      true,
+      true,
+      true
+    ],
+    "pa_020": [
+      true,
+      true,
+      true
+    ],
+    "pa_021": [
+      true,
+      true,
+      true
+    ],
+    "pa_022": [
+      true,
+      true,
+      true
+    ],
+    "pa_023": [
+      true,
+      true,
+      true
+    ],
+    "pa_024": [
+      true,
+      true,
+      true
+    ],
+    "pa_025": [
+      true,
+      true,
+      true
+    ],
+    "pa_026": [
+      true,
+      true,
+      true
+    ],
+    "pa_027": [
+      false,
+      false,
+      false
+    ],
+    "pa_028": [
+      true,
+      true,
+      true
+    ],
+    "pa_029": [
+      false,
+      false,
+      false
+    ],
+    "pa_030": [
+      true,
+      true,
+      true
+    ],
+    "rk_010": [
+      true,
+      true,
+      true
+    ],
+    "rk_011": [
+      true,
+      true,
+      true
+    ],
+    "rk_012": [
+      true,
+      true,
+      true
+    ],
+    "rk_013": [
+      true,
+      true,
+      true
+    ],
+    "rk_014": [
+      true,
+      true,
+      true
+    ],
+    "rk_015": [
+      true,
+      true,
+      true
+    ],
+    "rk_016": [
+      true,
+      true,
+      true
+    ],
+    "rk_017": [
+      true,
+      true,
+      true
+    ],
+    "rk_018": [
+      true,
+      true,
+      true
+    ],
+    "rk_019": [
+      true,
+      true,
+      true
+    ],
+    "rk_020": [
+      true,
+      true,
+      true
+    ],
+    "rk_021": [
+      true,
+      true,
+      true
+    ],
+    "rk_022": [
+      true,
+      true,
+      true
+    ],
+    "rk_023": [
+      true,
+      true,
+      true
+    ],
+    "rk_024": [
+      true,
+      true,
+      true
+    ],
+    "rk_025": [
+      true,
+      true,
+      true
+    ],
+    "rk_026": [
+      true,
+      true,
+      true
+    ],
+    "rk_027": [
+      true,
+      true,
+      true
+    ],
+    "rk_028": [
+      true,
+      true,
+      true
+    ],
+    "rk_029": [
+      true,
+      true,
+      true
+    ],
+    "rk_030": [
+      true,
+      true,
+      true
+    ],
+    "rk_031": [
+      true,
+      true,
+      true
+    ],
+    "rk_032": [
+      false,
+      false,
+      false
+    ],
+    "rk_033": [
+      true,
+      true,
+      true
+    ],
+    "rk_034": [
+      true,
+      true,
+      true
+    ],
+    "rk_035": [
+      true,
+      true,
+      true
+    ],
+    "rk_036": [
+      true,
+      true,
+      true
+    ],
+    "rk_037": [
+      true,
+      true,
+      true
+    ],
+    "rk_038": [
+      true,
+      true,
+      true
+    ],
+    "rk_039": [
+      true,
+      true,
+      true
+    ],
+    "rk_040": [
+      true,
+      true,
+      true
+    ],
+    "na_011": [
+      true,
+      true,
+      true
+    ],
+    "na_012": [
+      true,
+      true,
+      true
+    ],
+    "na_013": [
+      true,
+      true,
+      true
+    ],
+    "na_014": [
+      true,
+      true,
+      true
+    ],
+    "na_015": [
+      true,
+      true,
+      true
+    ],
+    "na_016": [
+      true,
+      true,
+      true
+    ],
+    "na_017": [
+      true,
+      true,
+      true
+    ],
+    "na_018": [
+      true,
+      true,
+      true
+    ],
+    "na_019": [
+      true,
+      true,
+      true
+    ],
+    "na_020": [
+      true,
+      true,
+      true
+    ]
+  }
+}

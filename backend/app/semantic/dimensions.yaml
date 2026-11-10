@@ -1,0 +1,305 @@
+# ============================================================
+# dimensions.yaml — 电商 ChatBI 维度字典（草案 v0.1）
+#
+# 与 metrics.yaml 配套：metrics.yaml 里的 dimensions 字段引用本文件的 biz_name。
+#
+# 设计对照：
+#   SuperSonic DimensionResp -> type(DATE|ID|CATEGORY) / semanticType / expr /
+#                               dimValueMaps(枚举值映射) / typeParams(时间格式) /
+#                               alias / isTag
+#   SQLBot terminology       -> 中文词 + 英文同义词 + embedding 召回
+#
+# 三条硬规则：
+#   1. 每个维度必须写 synonyms，否则“华东/去年/晚上”这类词无法映射；
+#   2. 枚举值必须写 value_maps，禁止让 LLM 自己猜 pv 是不是“浏览”；
+#   3. 没有的维度写到 unavailable，对应 metrics.yaml 的 no_answer。
+# ============================================================
+
+version: "0.1"
+owner: "your_name"
+updated_at: "2026-11-05"
+
+# ------------------------------------------------------------
+# 0. 关联关系（NL2SQL 生成 JOIN 的依据，对应 SuperSonic modelDetail.joins）
+# ------------------------------------------------------------
+joins:
+  - left: "dwd_behavior_fact"
+    right: "dim_date"
+    "on": "dwd_behavior_fact.dt = dim_date.dt"
+    type: "many_to_one"
+  - left: "dwd_behavior_fact"
+    right: "dim_category"
+    "on": "dwd_behavior_fact.category_id = dim_category.category_id"
+    type: "many_to_one"
+  - left: "path_user_session"
+    right: "dim_category"
+    "on": "path_user_session.category_id = dim_category.category_id"
+    type: "many_to_one"
+  - left: "ads_rfm_segments"
+    right: "dim_user"
+    "on": "ads_rfm_segments.user_id = dim_user.user_id"
+    type: "many_to_one"
+
+# ------------------------------------------------------------
+# 1. 维度
+#    type        : DATE（时间）/ ID（实体主键）/ CATEGORY（可枚举、可分组）
+#    semantic_type: date | time_of_day | id | category | enum
+#    exposure    : group_by_allowed / filter_only / hidden
+#                   hidden 维度在 Prompt 中不暴露，防止“按 user_id 拆一下”这类无效问题
+# ------------------------------------------------------------
+dimensions:
+
+  - name: "日期"
+    biz_name: "dt"
+    type: "DATE"
+    semantic_type: "date"
+    description: "行为发生的自然日，数仓统一时间字段"
+    expr: "dt"
+    data_type: "DATE"
+    source_table: "dwd_behavior_fact"
+    type_params:
+      format: "yyyy-MM-dd"
+      granularity: ["day", "week", "month"]
+      default_granularity: "day"
+      partition: true
+    aliases: ["日期", "天", "每天", "当日", "按天"]
+    synonyms: ["date", "day", "dt"]
+    value_maps: []
+    exposure: "group_by_allowed"
+    status: "PUBLISHED"
+    note: "跨天汇总必须重新去重，不能把日粒度指标相加"
+
+  - name: "时段"
+    biz_name: "hour"
+    type: "CATEGORY"
+    semantic_type: "time_of_day"
+    description: "行为发生的小时（0-23），用于时段分布与黄金时段分析"
+    expr: "hour"
+    data_type: "INT"
+    source_table: "dwd_behavior_fact"
+    aliases: ["时段", "小时", "几点", "时间点"]
+    synonyms: ["hour", "time_of_day", "hour_of_day"]
+    value_maps:
+      - value: 8
+        labels: ["早上8点", "上午8点", "8点"]
+      - value: 12
+        labels: ["中午", "12点", "午间"]
+      - value: 18
+        labels: ["傍晚", "下午6点", "18点"]
+      - value: 20
+        labels: ["晚上8点", "晚8点", "黄金时段"]
+      - value: 21
+        labels: ["晚上9点", "晚9点", "黄金时段"]
+      - value: 22
+        labels: ["晚上10点", "晚10点", "黄金时段"]
+      - value: 0
+        labels: ["凌晨", "零点", "半夜"]
+    exposure: "group_by_allowed"
+    status: "PUBLISHED"
+    note: "『晚上』指 18-23；『黄金时段』按 business_rules.golden_hours 过滤为 20-22"
+
+  - name: "行为类型"
+    biz_name: "behavior_type"
+    type: "CATEGORY"
+    semantic_type: "enum"
+    description: "用户行为枚举：浏览 pv / 加购 cart / 收藏 fav / 购买 buy"
+    expr: "behavior_type"
+    data_type: "VARCHAR"
+    source_table: "dwd_behavior_fact"
+    aliases: ["行为类型", "行为", "动作"]
+    synonyms: ["behavior", "action", "event_type"]
+    value_maps:
+      - value: "pv"
+        labels: ["浏览", "查看", "点击", "看过", "逛"]
+      - value: "cart"
+        labels: ["加购", "加入购物车", "放购物车", "添加购物车"]
+      - value: "fav"
+        labels: ["收藏", "关注商品", "心愿单"]
+      - value: "buy"
+        labels: ["购买", "下单", "成交", "付款", "买"]
+    exposure: "filter_only"
+    status: "PUBLISHED"
+    note: "禁止把 buy 直接叫『销量』，销量按笔数指标为 buy_cnt"
+
+  - name: "类目"
+    biz_name: "category_id"
+    type: "ID"
+    semantic_type: "id"
+    description: "商品一级类目 ID，关联 dim_category 取中文名"
+    expr: "category_id"
+    data_type: "BIGINT"
+    source_table: "dwd_behavior_fact"
+    aliases: ["类目", "品类", "商品类目", "一级类目"]
+    synonyms: ["category", "category_id", "cat"]
+    value_maps: []
+    exposure: "group_by_allowed"
+    status: "PUBLISHED"
+    note: "展示时替换为 dim_category.category_name；『品牌』维度不存在，见 unavailable"
+
+  - name: "商品"
+    biz_name: "item_id"
+    type: "ID"
+    semantic_type: "id"
+    description: "商品 ID，仅用于 Top 商品类问题"
+    expr: "item_id"
+    data_type: "BIGINT"
+    source_table: "dwd_behavior_fact"
+    aliases: ["商品", "商品ID", "宝贝"]
+    synonyms: ["item", "item_id", "sku"]
+    value_maps: []
+    exposure: "group_by_allowed"
+    status: "PUBLISHED"
+    note: "数据集无商品标题，回答时以 item_id 呈现并说明"
+
+  - name: "会话"
+    biz_name: "session_id"
+    type: "ID"
+    semantic_type: "id"
+    description: "用户会话 ID，行为路径表的关联键"
+    expr: "session_id"
+    data_type: "BIGINT"
+    source_table: "path_user_session"
+    aliases: ["会话", "session", "访问会话"]
+    synonyms: ["session", "visit"]
+    value_maps: []
+    exposure: "filter_only"
+    status: "PUBLISHED"
+
+  - name: "用户"
+    biz_name: "user_id"
+    type: "ID"
+    semantic_type: "id"
+    description: "用户 ID，仅用于去重计数，不作为分组维度"
+    expr: "user_id"
+    data_type: "BIGINT"
+    source_table: "dwd_behavior_fact"
+    aliases: ["用户", "用户ID", "买家"]
+    synonyms: ["user", "uid"]
+    value_maps: []
+    exposure: "hidden"
+    status: "PUBLISHED"
+    note: "隐藏维度：缩到『按用户拆』这类问题没有业务意义，且结果行数不可控"
+
+  - name: "RFM 分层"
+    biz_name: "rfm_segment"
+    type: "CATEGORY"
+    semantic_type: "enum"
+    description: "RFM 八分层结果，阈值见 metrics.yaml business_rules.rfm_thresholds"
+    expr: "rfm_segment"
+    data_type: "VARCHAR"
+    source_table: "ads_rfm_segments"
+    aliases: ["RFM 分层", "用户分层", "用户价值分层", "客户分层"]
+    synonyms: ["rfm_segment", "segment", "user_segment"]
+    value_maps:
+      - value: "高价值"
+        labels: ["高价值用户", "核心用户", "VIP", "重要价值客户"]
+      - value: "潜力"
+        labels: ["潜力用户", "潜力客户", "待挖掘用户"]
+      - value: "新客"
+        labels: ["新用户", "新客户"]
+      - value: "流失预警"
+        labels: ["流失预警", "即将流失", "沉睡用户"]
+      - value: "一般"
+        labels: ["普通用户", "一般用户"]
+    exposure: "group_by_allowed"
+    status: "PUBLISHED"
+    note: "分层命名与 dim_user 保持一致；新增分层必须同步改 metrics 的 high_value_users 过滤条件"
+
+  - name: "是否大促日"
+    biz_name: "is_promo_day"
+    type: "CATEGORY"
+    semantic_type: "enum"
+    description: "该日是否为大促日（由 dt 与 promo_date 比较得到）"
+    expr: "CASE WHEN dt = (SELECT max_dt FROM meta_dataset_range WHERE id = 1) THEN 1 ELSE 0 END"
+    data_type: "INT"
+    source_table: "dwd_behavior_fact"
+    aliases: ["是否大促", "大促日", "活动日"]
+    synonyms: ["promo_day", "is_promo"]
+    value_maps:
+      - value: 1
+        labels: ["大促", "大促当天", "活动当天", "活动日"]
+      - value: 0
+        labels: ["非大促", "日常", "平销期"]
+    exposure: "filter_only"
+    status: "PUBLISHED"
+    note: "大促日 = meta_dataset_range.max_dt（本数据集不含双11）；promo_date_source=fixed 时才用固定日期"
+
+# ------------------------------------------------------------
+# 2. 虚拟粒度（metrics.yaml 中 grain: window 的落点）
+# ------------------------------------------------------------
+virtual_grain:
+  - biz_name: "window"
+    description: "数据集全窗口（约 9 天）整体汇总，不可与 dt 同时使用"
+    alias: ["全周期", "整体", "整个活动期"]
+    behavior: "不做 GROUP BY dt，直接对全窗口去重重算"
+
+# ------------------------------------------------------------
+# 3. 不存在的维度（对应 metrics.yaml no_answer，正确行为是拒答）
+# ------------------------------------------------------------
+unavailable:
+  - name: "地域"
+    aliases: ["省份", "城市", "华东", "地区", "区域", "各省", "省份分布"]
+    reason: "数据集无地域字段，dim_user 未建模地域属性"
+    behavior: "REFUSE"
+    fallback: "可改问类目或时段维度的分布"
+  - name: "用户属性"
+    aliases: ["性别", "年龄", "会员等级", "新老客标签"]
+    reason: "数据集无用户画像字段"
+    behavior: "REFUSE"
+  - name: "商品属性"
+    aliases: ["品牌", "价格", "折扣", "库存", "尺码"]
+    reason: "仅有 category_id，无商品属性表"
+    behavior: "REFUSE"
+  - name: "渠道"
+    aliases: ["App", "小程序", "H5", "PC", "站外"]
+    reason: "数据集无来源渠道字段"
+    behavior: "REFUSE"
+  - name: "金额"
+    aliases: ["GMV", "销售额", "客单价", "退款金额", "退款", "成交金额"]
+    reason: "行为日志无金额与退款字段"
+    behavior: "REFUSE"
+    fallback: "改用 buy_cnt（成交笔数）或 buy_users（成交人数）"
+  - name: "售后 / 营销 / 曝光链路"
+    aliases: ["退货", "优惠券", "核销", "曝光", "展现", "关键词", "搜索词",
+              "支付方式", "毛利", "利润率", "成本"]
+    reason: "行为日志只有 pv/cart/fav/buy 四类行为，无售后、营销、曝光、搜索、支付方式字段"
+    behavior: "REFUSE"
+    fallback: "可改问加购未购、路径转化率或时段分布"
+  - name: "具体大促日（双11 / 双12 等）"
+    aliases: ["双11", "双十一", "双12", "双十二", "618", "年货节"]
+    reason: "数据集仅覆盖 2017-11-25 ~ 2017-12-03，不含这些具体大促日"
+    behavior: "REFUSE"
+    fallback: "可改问「活动日（数据集最后一天）」的相关指标，或说明需要另行取数"
+
+# ------------------------------------------------------------
+# 4. 时间解析规则（NL2SQL 的前置步骤，避免 LLM 用“今天”算历史数据）
+# ------------------------------------------------------------
+time_resolution:
+  reference_point: "数据集最大 dt（meta_dataset_range.max_dt），不是系统当前日期"
+  rules:
+    - phrase: ["昨天", "昨日"]
+      resolve: "max_dt - 1 天"
+    - phrase: ["今天", "今日"]
+      resolve: "max_dt"
+    - phrase: ["上个月", "上月"]
+      resolve: "max_dt 所在月的上一自然月（如果数据不覆盖则 REFUSE）"
+    - phrase: ["去年", "同比"]
+      resolve: "max_dt 年份 - 1（本数据集不覆盖，直接 REFUSE）"
+    - phrase: ["前7天", "近一周"]
+      resolve: "相对活动日（max_dt）的前 7 天"
+      scope: "promo_conversion_lift 专用"
+    - phrase: ["大促当天", "活动日", "最后一天"]
+      resolve: "meta_dataset_range.max_dt"
+    - phrase: ["双11", "双十一", "双12", "618"]
+      resolve: "REFUSE（数据集不覆盖）"
+  guardrail: "任何相对时间在生成 SQL 前必须先解析成具体日期并回显给用户确认"
+
+# ------------------------------------------------------------
+# 5. 注入策略（与 metrics.yaml context_policy 合并生效）
+# ------------------------------------------------------------
+injection:
+  dimensions_max: 12
+  always_include: ["dt", "category_id", "behavior_type"]
+  never_include: ["user_id"]
+  value_map_inject: true            # 枚举映射随维度一起注入，防止 pv/buy 被误解
+  synonym_inject: true

@@ -1,0 +1,106 @@
+# ============================================================
+# ecom-chatbi 本地/演示环境
+#
+# 启动数据库（默认，不构建 api，因此还不需要 Dockerfile）：
+#   cd deploy && docker compose up -d mysql redis
+#
+# 之后导入数据：
+#   cd ../backend/warehouse && mysql -h 127.0.0.1 -P 3306 -u root -p --local-infile=1 < run_all.sql
+#
+# 等 FastAPI 代码就绪后再起 api（profile 隔离，避免半成品把整个 compose 卡住）：
+#   docker compose --profile app up -d --build
+#
+# 关键点：
+#   - local_infile=1：01 脚本用 LOAD DATA LOCAL INFILE
+#   - ../data:/data：容器内路径 /data/ods/... 与 01 脚本、下载脚本输出保持一致
+#   - innodb-buffer-pool-size 默认 512M，2C4G 机器可跑；8G 以上可调到 1G~2G
+# ============================================================
+
+name: ecom-chatbi
+
+services:
+  mysql:
+    image: mysql:8.0.36
+    container_name: chatbi-mysql
+    restart: unless-stopped
+    command:
+      - --local-infile=1
+      - --secure-file-priv=
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=512M
+      - --max-connections=200
+      - --innodb-flush-log-at-trx-commit=1
+      - --sql-mode=STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-chatbi_root}
+      MYSQL_DATABASE: ecom_chatbi
+      TZ: Asia/Shanghai
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../data:/data          # csv 与容器内路径 /data/ods/... 的约定
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatbi-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ---------- FastAPI（代码就绪后再启用） ----------
+  api:
+    profiles: ["app"]
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: chatbi-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      TZ: Asia/Shanghai
+      # 只读账号：语义层护栏的数据库层保障，与 guardrails.readonly_account 对应
+      DATABASE_URL: mysql+pymysql://chatbi_ro:${CHATBI_RO_PASSWORD:-chatbi_ro}@mysql:3306/ecom_chatbi?charset=utf8mb4
+      REDIS_URL: redis://redis:6379/0
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      # 默认哈希向量：不联网、不加载模型；需要更强召回时设为 bge
+      EMBEDDER: ${EMBEDDER:-hashing}
+      EMBEDDER_MODEL: ${EMBEDDER_MODEL:-BAAI/bge-m3}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ../backend:/app        # 开发期热挂载；正式部署请删除这一行
+
+volumes:
+  mysql_data:
+  redis_data:

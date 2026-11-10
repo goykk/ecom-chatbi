@@ -1,0 +1,181 @@
+# ============================================================
+# fewshot.yaml —— NL2SQL 动态示例库（初始 12 条）
+#
+# 使用方式：按问题相似度注入 top-3，不是全量塞进 Prompt。
+# 维护规则：
+#   1. 每条示例必须能真实执行（新增后跑一遍 tests/test_fewshot.py）
+#   2. metric_refs 必须是 metrics.yaml 中已定义的 biz_name
+#   3. tags 用于字面加权召回，写用户真实会说的词
+#   4. 相对时间一律用 meta_dataset_range.max_dt，禁止写 CURRENT_DATE
+# ============================================================
+
+version: "0.1"
+
+examples:
+
+  - id: "f001"
+    question: "昨天有多少人访问"
+    metric_refs: ["uv"]
+    tags: ["访问", "人数", "昨日"]
+    sql: |
+      SELECT COUNT(DISTINCT user_id) AS uv
+      FROM dwd_behavior_fact
+      WHERE dt = (SELECT DATE_SUB(max_dt, INTERVAL 1 DAY) FROM meta_dataset_range WHERE id = 1)
+
+  - id: "f002"
+    question: "昨天加购但没买的用户有多少"
+    metric_refs: ["cart_no_buy_users", "cart_rate"]
+    tags: ["加购未购", "弃购", "购物车"]
+    sql: |
+      SELECT COUNT(DISTINCT user_id) AS cart_no_buy_users
+      FROM path_user_session
+      WHERE has_cart = 1
+        AND has_buy = 0
+        AND dt = (SELECT DATE_SUB(max_dt, INTERVAL 1 DAY) FROM meta_dataset_range WHERE id = 1)
+
+  - id: "f003"
+    question: "活动日转化率比前一周的日均水平高多少"
+    metric_refs: ["conversion_rate", "promo_conversion_lift"]
+    tags: ["大促", "环比", "转化率", "日均", "均值"]
+    sql: |
+      -- 比率类指标跨天比较：必须「先按天算率，再对日值求平均」，
+      -- 不能把 7 天的买卖人数合并成一个率（会被人数多的日期主导）
+      WITH p AS (SELECT max_dt AS promo_dt FROM meta_dataset_range WHERE id = 1),
+      promo AS (
+          SELECT COUNT(DISTINCT CASE WHEN behavior_type = 'buy' THEN user_id END)
+                 / NULLIF(COUNT(DISTINCT user_id), 0) AS rate
+          FROM dwd_behavior_fact
+          WHERE dt = (SELECT promo_dt FROM p)
+      ),
+      daily AS (
+          SELECT dt,
+                 COUNT(DISTINCT CASE WHEN behavior_type = 'buy' THEN user_id END)
+                 / NULLIF(COUNT(DISTINCT user_id), 0) AS rate
+          FROM dwd_behavior_fact
+          WHERE dt BETWEEN (SELECT DATE_SUB(promo_dt, INTERVAL 7 DAY) FROM p)
+                       AND (SELECT DATE_SUB(promo_dt, INTERVAL 1 DAY) FROM p)
+          GROUP BY dt
+      ),
+      base AS (SELECT AVG(rate) AS rate FROM daily)
+      SELECT ROUND((promo.rate - base.rate) / NULLIF(base.rate, 0), 4) AS lift
+      FROM promo, base
+
+  - id: "f013"
+    question: "前 7 天平均每天有多少人访问"
+    metric_refs: ["uv"]
+    tags: ["日均", "均值", "平均每天", "访问人数"]
+    sql: |
+      -- 人数类指标的日均：同样先按天去重，再对日值求平均；
+      -- 不能把 7 天去重 UV 除以 7（多天活跃的用户只会被计一次，会低估日均）
+      WITH p AS (SELECT max_dt AS promo_dt FROM meta_dataset_range WHERE id = 1),
+      daily AS (
+          SELECT dt, COUNT(DISTINCT user_id) AS uv
+          FROM dwd_behavior_fact
+          WHERE dt BETWEEN (SELECT DATE_SUB(promo_dt, INTERVAL 7 DAY) FROM p)
+                       AND (SELECT DATE_SUB(promo_dt, INTERVAL 1 DAY) FROM p)
+          GROUP BY dt
+      )
+      SELECT ROUND(AVG(uv), 1) AS avg_daily_uv FROM daily
+
+  - id: "f004"
+    question: "哪个类目加购率最低，给前 10 个"
+    metric_refs: ["cart_rate"]
+    tags: ["类目", "加购率", "排名", "最低"]
+    sql: |
+      -- 分母是访问人数 uv_users，不是浏览人数 pv_users；
+      -- 低样本类目先过滤，否则大量 0% 并列会让 TopN 边界不稳定
+      SELECT c.category_name,
+             ROUND(d.cart_users / NULLIF(d.uv_users, 0), 4) AS cart_rate
+      FROM dws_category_daily d
+      JOIN dim_category c ON c.category_id = d.category_id
+      WHERE d.dt = (SELECT max_dt FROM meta_dataset_range WHERE id = 1)
+        AND d.uv_users >= 100
+      ORDER BY cart_rate ASC
+      LIMIT 10
+
+  - id: "f005"
+    question: "各时段的成交笔数分布"
+    metric_refs: ["buy_cnt"]
+    tags: ["时段", "小时", "成交", "分布"]
+    sql: |
+      SELECT hour, COUNT(*) AS buy_cnt
+      FROM dwd_behavior_fact
+      WHERE behavior_type = 'buy'
+      GROUP BY hour
+      ORDER BY hour
+
+  - id: "f006"
+    question: "RFM 各层有多少人"
+    metric_refs: ["high_value_users"]
+    tags: ["RFM", "用户分层", "人数"]
+    sql: |
+      SELECT rfm_segment, COUNT(*) AS users
+      FROM ads_rfm_segments
+      GROUP BY rfm_segment
+      ORDER BY users DESC
+
+  - id: "f007"
+    question: "高价值用户占比多少"
+    metric_refs: ["high_value_users"]
+    tags: ["高价值", "占比", "RFM"]
+    sql: |
+      SELECT ROUND(SUM(CASE WHEN rfm_segment = '高价值' THEN 1 ELSE 0 END)
+                   / NULLIF(COUNT(*), 0), 4) AS high_value_ratio
+      FROM ads_rfm_segments
+
+  - id: "f008"
+    question: "浏览超过 5 个商品但还没加购的用户有多少"
+    metric_refs: ["browse_no_cart_users"]
+    tags: ["浏览未加购", "深度浏览", "流失"]
+    sql: |
+      SELECT COUNT(DISTINCT user_id) AS browse_no_cart_users
+      FROM path_user_session
+      WHERE is_browse_heavy = 1
+        AND dt = (SELECT max_dt FROM meta_dataset_range WHERE id = 1)
+
+  - id: "f009"
+    question: "成交笔数最多的 10 个类目"
+    metric_refs: ["buy_cnt"]
+    tags: ["Top", "排名", "类目", "成交"]
+    sql: |
+      SELECT c.category_name, SUM(d.buy_cnt) AS buy_cnt
+      FROM dws_category_daily d
+      JOIN dim_category c ON c.category_id = d.category_id
+      GROUP BY c.category_name
+      ORDER BY buy_cnt DESC
+      LIMIT 10
+
+  - id: "f010"
+    question: "近几天的次日留存率趋势"
+    metric_refs: ["d1_retention_rate"]
+    tags: ["留存", "次日", "趋势"]
+    sql: |
+      SELECT dt, d0_users, d1_users, ROUND(d1_rate, 4) AS d1_rate
+      FROM ads_retention_matrix
+      ORDER BY dt
+
+  - id: "f011"
+    question: "先加购后成交的转化率是多少"
+    metric_refs: ["cart_to_buy_rate"]
+    tags: ["加购成交", "购物车转化", "路径"]
+    sql: |
+      -- 路径口径：严格「先加购、后成交」；未限定时间范围时按全窗口汇总
+      SELECT ROUND(COUNT(DISTINCT CASE WHEN is_cart_before_buy = 1 THEN user_id END)
+                   / NULLIF(COUNT(DISTINCT CASE WHEN has_cart = 1 THEN user_id END), 0), 4)
+             AS cart_to_buy_rate
+      FROM path_user_session
+
+  - id: "f012"
+    question: "大促当天和平时前 7 天的访问人数对比"
+    metric_refs: ["uv", "promo_conversion_lift"]
+    tags: ["大促", "对比", "访问人数"]
+    sql: |
+      -- 对比类统一「单行两列」：不要按 period 拆成两行，
+      -- 行标签（promo/baseline）是展示细节，不是指标，容易被判为口径不一致
+      WITH p AS (SELECT max_dt AS promo_dt FROM meta_dataset_range WHERE id = 1)
+      SELECT
+          (SELECT COUNT(DISTINCT user_id) FROM dwd_behavior_fact
+           WHERE dt = (SELECT promo_dt FROM p)) AS promo_uv,
+          (SELECT COUNT(DISTINCT user_id) FROM dwd_behavior_fact
+           WHERE dt BETWEEN (SELECT DATE_SUB(promo_dt, INTERVAL 7 DAY) FROM p)
+                        AND (SELECT DATE_SUB(promo_dt, INTERVAL 1 DAY) FROM p)) AS baseline_7d_uv

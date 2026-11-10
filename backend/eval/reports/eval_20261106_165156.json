@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "time": "2026-11-06 16:51:56",
+    "dataset": "D:\\我的文件\\temp_20261105_02\\ecom-chatbi\\backend\\eval\\dataset\\seed.jsonl",
+    "model": "deepseek-chat",
+    "tolerance": 4
+  },
+  "stats": {
+    "total": 6,
+    "exec_cases": 6,
+    "exec_matched": 4,
+    "execution_accuracy": 0.6667,
+    "refuse_cases": 0,
+    "refuse_matched": 0,
+    "refusal_accuracy": null,
+    "overall_accuracy": 0.6667,
+    "first_pass_rate": 0.6667,
+    "error_rate": 0.0,
+    "avg_latency_ms": 1460.3,
+    "p95_latency_ms": 2283.1,
+    "by_category": {
+      "traffic": {
+        "total": 5,
+        "matched": 4,
+        "accuracy": 0.8
+      },
+      "time_compare": {
+        "total": 1,
+        "matched": 0,
+        "accuracy": 0.0
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "tc_001",
+      "question": "昨天有多少人访问",
+      "category": "traffic",
+      "expect": "SQL",
+      "predicted_action": "sql",
+      "predicted_sql": "SELECT COUNT(DISTINCT user_id) AS uv FROM dwd_behavior_fact WHERE dt = (SELECT DATE_SUB(max_dt, INTERVAL '1' DAY) FROM meta_dataset_range WHERE id = 1) LIMIT 1000",
+      "gold_sql": "SELECT COUNT(DISTINCT user_id) AS uv FROM dwd_behavior_fact WHERE dt = (SELECT DATE_SUB(max_dt, INTERVAL 1 DAY) FROM meta_dataset_range WHERE id = 1)",
+      "matched": true,
+      "reason": "结果集一致",
+      "latency_ms": 1012.2,
+      "attempts": 1,
+      "gold_error": null
+    },
+    {
+      "id": "tc_002",
+      "question": "昨天的浏览人数是多少",
+      "category": "traffic",
+      "expect": "SQL",
+      "predicted_action": "sql",
+      "predicted_sql": "SELECT COUNT(DISTINCT user_id) AS browse_users FROM dwd_behavior_fact WHERE dt = (SELECT DATE_SUB(max_dt, INTERVAL '1' DAY) FROM meta_dataset_range WHERE id = 1) AND behavior_type = 'pv' LIMIT 1000",
+      "gold_sql": "SELECT COUNT(DISTINCT user_id) AS pv_users FROM dwd_behavior_fact WHERE behavior_type = 'pv' AND dt = (SELECT DATE_SUB(max_dt, INTERVAL 1 DAY) FROM meta_dataset_range WHERE id = 1)",
+      "matched": true,
+      "reason": "结果集一致",
+      "latency_ms": 1161.1,
+      "attempts": 1,
+      "gold_error": null
+    },
+    {
+      "id": "tc_003",
+      "question": "昨天成交人数有多少",
+      "category": "traffic",
+      "expect": "SQL",
+      "predicted_action": "sql",
+      "predicted_sql": "SELECT COUNT(DISTINCT user_id) AS buy_users FROM dwd_behavior_fact WHERE behavior_type = 'buy' AND dt = (SELECT DATE_SUB(max_dt, INTERVAL '1' DAY) FROM meta_dataset_range WHERE id = 1) LIMIT 1000",
+      "gold_sql": "SELECT COUNT(DISTINCT user_id) AS buy_users FROM dwd_behavior_fact WHERE behavior_type = 'buy' AND dt = (SELECT DATE_SUB(max_dt, INTERVAL 1 DAY) FROM meta_dataset_range WHERE id = 1)",
+      "matched": true,
+      "reason": "结果集一致",
+      "latency_ms": 1329.9,
+      "attempts": 1,
+      "gold_error": null
+    },
+    {
+      "id": "tc_004",
+      "question": "昨天加购人数",
+      "category": "traffic",
+      "expect": "SQL",
+      "predicted_action": "sql",
+      "predicted_sql": "SELECT COUNT(DISTINCT user_id) AS cart_users FROM dwd_behavior_fact WHERE behavior_type = 'cart' AND dt = (SELECT DATE_SUB(max_dt, INTERVAL '1' DAY) FROM meta_dataset_range WHERE id = 1) LIMIT 1000",
+      "gold_sql": "SELECT COUNT(DISTINCT user_id) AS cart_users FROM dwd_behavior_fact WHERE behavior_type = 'cart' AND dt = (SELECT DATE_SUB(max_dt, INTERVAL 1 DAY) FROM meta_dataset_range WHERE id = 1)",
+      "matched": true,
+      "reason": "结果集一致",
+      "latency_ms": 1420.3,
+      "attempts": 1,
+      "gold_error": null
+    },
+    {
+      "id": "tc_005",
+      "question": "昨天的加购率是多少",
+      "category": "traffic",
+      "expect": "SQL",
+      "predicted_action": "sql",
+      "predicted_sql": "WITH p AS (SELECT max_dt AS d FROM meta_dataset_range WHERE id = 1) SELECT dt, ROUND(cart_users / NULLIF(uv, 0), 4) AS cart_rate FROM (SELECT dt, COUNT(DISTINCT CASE WHEN behavior_type = 'cart' THEN user_id END) AS cart_users, COUNT(DISTINCT user_id) AS uv FROM dwd_behavior_fact WHERE dt = (SELECT DATE_SUB(d, INTERVAL '1' DAY) FROM p) GROUP BY dt) AS t LIMIT 1000",
+      "gold_sql": "SELECT ROUND(COUNT(DISTINCT CASE WHEN behavior_type = 'cart' THEN user_id END) / NULLIF(COUNT(DISTINCT user_id), 0), 4) AS cart_rate FROM dwd_behavior_fact WHERE dt = (SELECT DATE_SUB(max_dt, INTERVAL 1 DAY) FROM meta_dataset_range WHERE id = 1)",
+      "matched": false,
+      "reason": "列数不同：gold=1 / pred=2",
+      "latency_ms": 1555.2,
+      "attempts": 1,
+      "gold_error": null
+    },
+    {
+      "id": "tm_001",
+      "question": "活动日当天转化率比前 7 天均值高多少",
+      "category": "time_compare",
+      "expect": "SQL",
+      "predicted_action": "sql",
+      "predicted_sql": "WITH p AS (SELECT max_dt AS promo_dt FROM meta_dataset_range WHERE id = 1), promo AS (SELECT COUNT(DISTINCT CASE WHEN behavior_type = 'buy' THEN user_id END) AS buy_users, COUNT(DISTINCT CASE WHEN behavior_type = 'pv' THEN user_id END) AS uv FROM dwd_behavior_fact WHERE dt = (SELECT promo_dt FROM p)), base AS (SELECT COUNT(DISTINCT CASE WHEN behavior_type = 'buy' THEN user_id END) AS buy_users, COUNT(DISTINCT CASE WHEN behavior_type = 'pv' THEN user_id END) AS uv FROM dwd_behavior_fact WHERE dt BETWEEN (SELECT DATE_SUB(promo_dt, INTERVAL '7' DAY) FROM p) AND (SELECT DATE_SUB(promo_dt, INTERVAL '1' DAY) FROM p)) SELECT (SELECT promo_dt FROM p) AS promo_dt, ROUND(promo.buy_users / NULLIF(promo.uv, 0), 4) AS promo_rate, ROUND(base.buy_users / NULLIF(base.uv, 0), 4) AS base_rate, ROUND((promo.buy_users / NULLIF(promo.uv, 0) - base.buy_users / NULLIF(base.uv, 0)) / NULLIF(base.buy_users / NULLIF(base.uv, 0), 0), 4) AS lift FROM promo, base LIMIT 1000",
+      "gold_sql": "WITH p AS (SELECT max_dt AS promo_dt FROM meta_dataset_range WHERE id = 1), promo AS (SELECT COUNT(DISTINCT CASE WHEN behavior_type = 'buy' THEN user_id END) AS buy_users, COUNT(DISTINCT CASE WHEN behavior_type = 'pv' THEN user_id END) AS pv_users FROM dwd_behavior_fact WHERE dt = (SELECT promo_dt FROM p)), base AS (SELECT COUNT(DISTINCT CASE WHEN behavior_type = 'buy' THEN user_id END) AS buy_users, COUNT(DISTINCT CASE WHEN behavior_type = 'pv' THEN user_id END) AS pv_users FROM dwd_behavior_fact WHERE dt BETWEEN (SELECT DATE_SUB(promo_dt, INTERVAL 7 DAY) FROM p) AND (SELECT DATE_SUB(promo_dt, INTERVAL 1 DAY) FROM p)) SELECT ROUND(promo.buy_users / NULLIF(promo.pv_users, 0), 4) AS promo_rate, ROUND(base.buy_users / NULLIF(base.pv_users, 0), 4) AS base_rate, ROUND((promo.buy_users / NULLIF(promo.pv_users, 0) - base.buy_users / NULLIF(base.pv_users, 0)) / NULLIF(base.buy_users / NULLIF(base.pv_users, 0), 0), 4) AS lift FROM promo, base",
+      "matched": false,
+      "reason": "列数不同：gold=3 / pred=4",
+      "latency_ms": 2283.1,
+      "attempts": 1,
+      "gold_error": null
+    }
+  ]
+}

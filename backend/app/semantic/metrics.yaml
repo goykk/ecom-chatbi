@@ -1,0 +1,645 @@
+# ============================================================
+# metrics.yaml — 电商 ChatBI 语义层定义（草案 v0.1）
+#
+# 设计对照：
+#   SuperSonic Headless BI  -> dataset / model / metric(ATOMIC|DERIVED,
+#                              define_by MEASURE|FIELD|METRIC) / dimension / term
+#   SQLBot                  -> terminology(word + description + embedding + scope)
+#                              data_training(question + description + embedding)
+#
+# 数据源：天池 UserBehavior 抽样 500 万~1000 万行，MySQL 数仓（ods/dwd/dws/ads）
+# 本文件只定义：数据集元信息、指标、术语、拒答边界、执行护栏。
+# 维度明细字段见 dimensions.yaml（下一步产出）。
+# ============================================================
+
+version: "0.1"
+owner: "your_name"
+updated_at: "2026-11-05"
+
+# ------------------------------------------------------------
+# 1. 数据集（对应 SuperSonic 的 domain + database + model）
+# ------------------------------------------------------------
+dataset:
+  name: "电商用户行为数仓"
+  biz_name: "ecom_user_behavior"
+  database: "ecom_chatbi"
+  domain: "traffic"                 # 主题域：流量 / 转化 / 用户 / 商品
+  time_field: "dt"                  # 全库统一时间字段
+  # 数据集只有 9 天（大促前后），具体起止由抽样脚本写入 meta 表，不在此硬编码
+  time_range_source: "meta_dataset_range"
+  tables:
+    fact: "dwd_behavior_fact"
+    path: "path_user_session"
+    dims:
+      - "dim_date"
+      - "dim_category"
+      - "dim_user"
+    ads:
+      funnel: "ads_funnel_daily"
+      rfm: "ads_rfm_segments"
+      retention: "ads_retention_matrix"
+
+# ------------------------------------------------------------
+# 2. 业务规则（口径参数集中管理，禁止散落在 Prompt 里）
+# ------------------------------------------------------------
+business_rules:
+  rfm_thresholds:
+    r_days: 7                       # R：最近一次购买距今天数 <= 7 记为高
+    f_times: 2                      # F：窗口内购买次数 >= 2 记为高
+    m_times: 3                      # M：本数据集无金额，用量近似（见 caveat）
+  promo:
+    # 重要：天池 UserBehavior 实际覆盖 2017-11-25 ~ 2017-12-03，**不含双11**。
+    # 因此大促日不能写死 11-11，改为取数据集最后一天（max_dt）作为「活动日」。
+    # 若后续换成真正含大促的数据集，把 promo_date_source 改回 fixed 并填 promo_date。
+    promo_date_source: "max_dt"     # max_dt / fixed
+    promo_date: null                # promo_date_source=fixed 时必填
+    baseline_days: 7                # 对比基线：前 7 天
+  golden_hours: [20, 21, 22]        # 电商晚 8~10 点黄金时段
+  path_definition:
+    pv_threshold_for_browse: 5      # “浏览超过 5 个商品”的阈值
+
+# ------------------------------------------------------------
+# 3. 指标
+#    字段说明（照 SuperSonic 语义）：
+#      define_type : ATOMIC（原子） / DERIVED（派生，引用其他指标）
+#      define_by   : MEASURE（聚合表达式） / FIELD（直接取字段） / METRIC（引用指标）
+#      expr        : 只有 define_by=MEASURE/FIELD 时使用
+#      formula     : 只有 define_by=METRIC 时使用，只能引用本文件已定义的 biz_name
+#      grain       : 指标的统计粒度（去重口径的边界）
+#      dimensions  : 允许下钻/切分的维度
+# ------------------------------------------------------------
+metrics:
+
+  # ---------- 流量 ----------
+  - name: "访问人数"
+    biz_name: "uv"
+    description: "当日有任意行为的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "COUNT(DISTINCT user_id)"
+    default_agg: "COUNT_DISTINCT"
+    source_table: "dwd_behavior_fact"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id", "hour"]
+    filters: ["behavior_type IN ('pv','cart','fav','buy')"]
+    aliases: ["活跃用户数", "访问用户", "UV"]
+    unit: "人"
+    status: "PUBLISHED"
+    gold_sql_id: ["tc_001", "tc_002"]
+    caveat: "与 dws_user_daily.uv 对齐；跨天汇总不能简单相加，必须重新去重"
+
+  - name: "浏览次数"
+    biz_name: "pv"
+    description: "当日浏览行为次数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "COUNT(1)"
+    source_table: "dwd_behavior_fact"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id", "hour"]
+    filters: ["behavior_type = 'pv'"]
+    aliases: ["浏览量", "PV"]
+    unit: "次"
+    status: "PUBLISHED"
+
+  # ---------- 转化 ----------
+  - name: "成交人数"
+    biz_name: "buy_users"
+    description: "当日有购买行为的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "dwd_behavior_fact"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id", "hour"]
+    filters: ["behavior_type = 'buy'"]
+    aliases: ["下单人数", "支付人数"]
+    unit: "人"
+    status: "PUBLISHED"
+    caveat: "buy 行为去重人数，不代表支付成功订单数"
+
+  - name: "成交笔数"
+    biz_name: "buy_cnt"
+    description: "当日购买行为次数（笔数近似）"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "COUNT(1)"
+    source_table: "dwd_behavior_fact"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id", "hour"]
+    filters: ["behavior_type = 'buy'"]
+    aliases: ["订单数", "成交次数", "销量"]
+    unit: "笔"
+    status: "PUBLISHED"
+    caveat: "本数据集无金额字段，禁止由此换算 GMV / 客单价"
+
+  - name: "加购人数"
+    biz_name: "cart_users"
+    description: "当日有加购行为的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "dwd_behavior_fact"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id", "hour"]
+    filters: ["behavior_type = 'cart'"]
+    aliases: ["加购用户"]
+    unit: "人"
+    status: "PUBLISHED"
+
+  - name: "收藏人数"
+    biz_name: "fav_users"
+    description: "当日有收藏行为的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "dwd_behavior_fact"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    filters: ["behavior_type = 'fav'"]
+    aliases: ["收藏用户"]
+    unit: "人"
+    status: "PUBLISHED"
+
+  # ---------- 路径 / 流失（依赖 path_user_session，本项目差异化资产） ----------
+  - name: "加购未购人数"
+    biz_name: "cart_no_buy_users"
+    description: "当日 session 内加购过但未购买的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "path_user_session"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    filters: ["has_cart = 1", "has_buy = 0"]
+    aliases: ["加购未转化用户", "购物车流失用户"]
+    unit: "人"
+    status: "PUBLISHED"
+    gold_sql_id: ["tc_003"]
+    caveat: "口径以 session 为单位判定，跨 session 的『先加购后买』不计入流失"
+
+  - name: "加购成交人数"
+    biz_name: "cart_buy_users"
+    description: "session 内先加购、后成交的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "path_user_session"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    filters: ["has_cart = 1", "has_buy = 1", "cart_first_seq < buy_first_seq"]
+    aliases: ["加购后成交用户", "购物车成交用户"]
+    unit: "人"
+    status: "PUBLISHED"
+    note: "与 buy_users 的差值即『买后加购』用户，是路径口径独有的洞察"
+    caveat: "依赖 path_user_session 的四个派生列 has_cart / has_buy / cart_first_seq / buy_first_seq；顺序用首次出现的 path_seq 判定，不按行为条数。若只建了 has_cart/has_buy 而无序号列，口径会退化为『当日既加购又成交』，请勿混用"
+
+  - name: "浏览未加购人数"
+    biz_name: "browse_no_cart_users"
+    description: "当日浏览商品数达到阈值但未加购的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "path_user_session"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    filters: ["pv_item_cnt >= {{ path_definition.pv_threshold_for_browse }}", "has_cart = 0", "has_buy = 0"]
+    aliases: ["浏览未加购用户", "深度浏览流失"]
+    unit: "人"
+    status: "DRAFT"
+    caveat: "阈值来自 business_rules.path_definition，改配置即可复跑评测"
+
+  - name: "买后加购人数"
+    biz_name: "buy_before_cart_users"
+    description: "session 内先成交、后加购的去重用户数（加购不是转化前置动作的那部分）"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "path_user_session"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    filters: ["is_buy_before_cart = 1"]
+    aliases: ["买后加购用户", "成交后加购", "购后加购"]
+    unit: "人"
+    status: "PUBLISHED"
+    gold_sql_id: ["pa_005"]
+    note: "路径表派生列 is_buy_before_cart 判定；与『当日既加购又成交』不同。问题未限定时间范围时按全窗口（整个数据周期）汇总，不要默认只取 max_dt"
+
+  - name: "平均路径长度"
+    biz_name: "avg_path_len"
+    description: "先加购后成交路径的平均行为条数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "AVG(path_len)"
+    source_table: "path_user_session"
+    grain: ["window"]
+    dimensions: ["dt", "category_id"]
+    filters: ["is_cart_before_buy = 1"]
+    aliases: ["路径长度均值", "平均行为条数"]
+    unit: "条"
+    status: "PUBLISHED"
+    gold_sql_id: ["pa_008"]
+    note: "path_len = action_cnt；逐路径求均值，不是先按用户汇总再平均。未指定时间范围时按全窗口汇总，不要默认只取 max_dt"
+
+  - name: "平均浏览商品数"
+    biz_name: "avg_pv_item_cnt"
+    description: "加购未购路径的平均浏览商品数（浏览深度）"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "AVG(pv_item_cnt)"
+    source_table: "path_user_session"
+    grain: ["window"]
+    dimensions: ["dt", "category_id"]
+    filters: ["has_cart = 1", "has_buy = 0"]
+    aliases: ["平均浏览商品数", "浏览深度均值"]
+    unit: "个"
+    status: "PUBLISHED"
+    gold_sql_id: ["pa_009"]
+    note: "逐路径对去重浏览商品数求均值；分母是加购未购路径，不是全部用户。未指定时间范围时按全窗口汇总，不要默认只取 max_dt"
+
+  # ---------- 用户价值 ----------
+  - name: "复购人数"
+    biz_name: "repurchase_users"
+    description: "时间窗内购买次数 >= 2 的去重用户数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "ads_rfm_segments"
+    grain: ["window"]
+    dimensions: []
+    filters: ["f_times >= 2"]
+    window: 9                        # 数据集全窗口 9 天，由 meta 写入
+    aliases: ["重复购买用户"]
+    unit: "人"
+    status: "PUBLISHED"
+    note: "按成交笔数（f_times >= 2），不是按购买天数；两者结果不同，不要混用"
+
+  - name: "平均购买笔数"
+    biz_name: "avg_buy_times"
+    description: "购买用户的人均成交笔数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "AVG(f_times)"
+    source_table: "ads_rfm_segments"
+    grain: ["window"]
+    dimensions: ["rfm_segment"]
+    aliases: ["平均购买次数", "人均成交笔数", "平均成交笔数"]
+    unit: "笔"
+    status: "PUBLISHED"
+    gold_sql_id: ["sg_007", "sg_009"]
+    note: "分母是购买用户（ads_rfm_segments 一行一个购买用户）；可按 rfm_segment 分层求均值"
+
+  - name: "高价值用户数"
+    biz_name: "high_value_users"
+    description: "RFM 三要素均达到阈值的用户数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "COUNT(DISTINCT user_id)"
+    source_table: "ads_rfm_segments"
+    grain: ["dt"]
+    dimensions: ["dt", "rfm_segment"]
+    filters: ["rfm_segment = '高价值'"]
+    aliases: ["高价值客户", "核心用户"]
+    unit: "人"
+    status: "PUBLISHED"
+    caveat: "M 用购买次数近似金额，需在口径文档中显式标注"
+
+  # ---------- 留存 ----------
+  - name: "次日留存人数"
+    biz_name: "d1_retained_users"
+    description: "D 日活跃且 D+1 日仍有行为的用户数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "SUM(d1_users)"
+    source_table: "ads_retention_matrix"
+    grain: ["dt"]
+    dimensions: ["dt"]
+    aliases: ["D1 留存人数"]
+    unit: "人"
+    status: "PUBLISHED"
+
+  - name: "当日活跃人数（留存分母）"
+    biz_name: "d0_users"
+    description: "留存矩阵中 cohort 当日活跃人数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "SUM(d0_users)"
+    source_table: "ads_retention_matrix"
+    grain: ["dt"]
+    dimensions: ["dt"]
+    aliases: ["当日活跃人数", "留存分母"]
+    unit: "人"
+    status: "PUBLISHED"
+    note: "留存率的分母必须用这个，不要用 uv（uv 来自明细表，不能和留存表混用）"
+
+  - name: "7 日留存人数"
+    biz_name: "d7_retained_users"
+    description: "D 日活跃且 D+7 日仍有行为的用户数"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "SUM(d7_users)"
+    source_table: "ads_retention_matrix"
+    grain: ["dt"]
+    dimensions: ["dt"]
+    aliases: ["D7 留存人数", "七日留存人数"]
+    unit: "人"
+    status: "PUBLISHED"
+    gold_sql_id: ["tm_011"]
+    note: "d7_users 已是该 cohort 的留存人数快照：问单日或『最近』时直接取该列，不要对多天 SUM 后再取一行；D+7 观察窗不完整时为 NULL，不能把 NULL 当 0"
+
+  # ---------- 派生指标（define_by = METRIC，只能引用上面已定义的 biz_name） ----------
+  - name: "购买商品种类数（购买宽度）"
+    biz_name: "avg_purchase_items"
+    description: "购买用户平均购买的去重商品数（金额缺失时近似消费宽度）"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "AVG(m_items)"
+    source_table: "ads_rfm_segments"
+    grain: ["window"]
+    dimensions: ["rfm_segment"]
+    aliases: ["平均购买商品数", "购买宽度", "人均购买种类", "购买了几种商品"]
+    unit: "个"
+    status: "PUBLISHED"
+    gold_sql_id: ["sg_026", "sg_027"]
+    note: "m_items = 该用户成交过的去重商品数；可按 rfm_segment 分层求均值"
+
+  - name: "平均最近成交间隔天数（R）"
+    biz_name: "avg_recency_days"
+    description: "购买用户最近一次成交距数据集最后一天的平均天数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "AVG(r_days)"
+    source_table: "ads_rfm_segments"
+    grain: ["window"]
+    dimensions: ["rfm_segment"]
+    aliases: ["平均R值", "平均距今天数", "最近成交间隔"]
+    unit: "天"
+    status: "PUBLISHED"
+    gold_sql_id: ["sg_028"]
+    note: "基准日是 meta_dataset_range.max_dt，不是系统当前日期；r_days 为 NULL 的行不参与平均"
+
+  - name: "RFM 三项达标人数"
+    biz_name: "rfm_all_high_users"
+    description: "R、F、M 三项都达到阈值的用户数（rfm_code = 111）"
+    define_type: "ATOMIC"
+    define_by: "FIELD"
+    expr: "COUNT(*)"
+    source_table: "ads_rfm_segments"
+    grain: ["window"]
+    dimensions: ["dt"]
+    aliases: ["RFM 三项达标", "111 人群", "全优用户"]
+    unit: "人"
+    status: "PUBLISHED"
+    gold_sql_id: ["sg_030"]
+    filters: ["r_score = 1", "f_score = 1", "m_score = 1"]
+    note: "阈值见 business_rules.rfm_thresholds：R<=7 天、F>=2 笔、M>=3 种商品"
+
+  - name: "路径数（会话数）"
+    biz_name: "path_sessions"
+    description: "会话级路径条数"
+    define_type: "ATOMIC"
+    define_by: "MEASURE"
+    expr: "COUNT(DISTINCT session_id)"
+    source_table: "path_user_session"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    aliases: ["路径数", "会话数", "多少条路径"]
+    unit: "条"
+    status: "PUBLISHED"
+    gold_sql_id: ["pa_024", "pa_025", "pa_026", "pa_028", "pa_029"]
+    note: "路径表粒度是 session×类目，一行不等于一条路径；必须 COUNT(DISTINCT session_id)，不能 COUNT(*)"
+
+  - name: "转化率"
+    biz_name: "conversion_rate"
+    description: "成交人数 / 访问人数，按天去重"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "buy_users / uv"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id", "hour"]
+    aliases: ["购买转化率", "下单转化率", "转化"]
+    unit: "%"
+    status: "PUBLISHED"
+    gold_sql_id: ["tc_010", "tm_002"]
+    note: "默认口径=按人。分母是访问人数 uv（有任意行为的去重用户），不是浏览人数 pv_users——真实数据存在无浏览直接购买，两者不等。按次数口径另有 conversion_rate_by_action，仅用于对照，不得混用"
+
+  - name: "转化率（按次数口径）"
+    biz_name: "conversion_rate_by_action"
+    description: "成交笔数 / 浏览次数，按行为次数计算"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "buy_cnt / pv"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    aliases: []
+    unit: "%"
+    status: "DRAFT"
+    note: "语义层对照实验专用：与默认按人口径的结果差异即『口径歧义』的量化证据"
+
+  - name: "加购率"
+    biz_name: "cart_rate"
+    description: "加购人数 / 访问人数"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "cart_users / uv"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    aliases: ["加购转化率"]
+    unit: "%"
+    status: "PUBLISHED"
+    gold_sql_id: ["tc_011", "rk_001"]
+    note: "分母是访问人数 uv，不是浏览人数 pv_users。按类目排名时先用 dws_category_daily 的 uv_users 过滤低样本类目（uv_users >= 100），再算 cart_users / uv_users，否则大量 0% 并列会让 TopN 边界不稳定；未指定日期时按活动日 max_dt 计算"
+
+  - name: "加购成交率"
+    biz_name: "cart_to_buy_rate"
+    description: "session 内先加购后成交人数 / 加购人数（路径口径）"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "cart_buy_users / cart_users"
+    grain: ["dt"]
+    dimensions: ["dt", "category_id"]
+    aliases: ["购物车转化率"]
+    unit: "%"
+    status: "PUBLISHED"
+    note: "分子 cart_buy_users 是 session 内先加购后成交，分母 cart_users 是当日加购人数；差值来自只在购物车停留未成交的用户，这正是路径表的价值。未指定时间范围时按全窗口（整个数据周期）汇总，不要默认只取 max_dt"
+
+  - name: "复购率"
+    biz_name: "repurchase_rate"
+    description: "复购人数 / 成交人数"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "repurchase_users / buy_users"
+    grain: ["window"]
+    dimensions: []
+    aliases: ["重复购买率"]
+    unit: "%"
+    window: 9
+    status: "PUBLISHED"
+    note: "按成交笔数 f_times >= 2 统计用户占比；不要用『购买天数 >= 2』替代，两者结果不同"
+
+  - name: "次日留存率"
+    biz_name: "d1_retention_rate"
+    description: "次日留存人数 / D 日活跃人数"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "d1_retained_users / d0_users"
+    grain: ["dt"]
+    dimensions: ["dt"]
+    aliases: ["次留", "D1 留存"]
+    unit: "%"
+    status: "PUBLISHED"
+    note: "问『最近一天留存率』时，取最近一个 d1_rate 非空的 cohort（max_dt 当天通常没有完整 D+1，直接取 max_dt 会得到 NULL）"
+
+  - name: "7 日留存率"
+    biz_name: "d7_retention_rate"
+    description: "7 日留存人数 / D 日活跃人数"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "d7_retained_users / d0_users"
+    grain: ["dt"]
+    dimensions: ["dt"]
+    aliases: ["D7 留存", "七日留存率", "周留存率"]
+    unit: "%"
+    status: "PUBLISHED"
+    gold_sql_id: ["tm_010"]
+    note: "D+7 观察窗不完整的 cohort 该列为 NULL；问『最近』时取最近一个 d7_rate 非空的 cohort。直接使用 d7_rate 列，不要用 SUM(d7_users)/d0_users 重算（重算口径与快照列不一致）"
+
+  - name: "大促转化率提升"
+    biz_name: "promo_conversion_lift"
+    description: "大促当日转化率相对前 N 天均值的提升幅度"
+    define_type: "DERIVED"
+    define_by: "METRIC"
+    formula: "(cr_promo - cr_baseline) / cr_baseline"
+    grain: ["promo_date"]
+    dimensions: []
+    params:
+      promo_date: "{{ promo.promo_date_source }}"
+      baseline_days: "{{ promo.baseline_days }}"
+      baseline_metric: "conversion_rate"
+    aliases: ["大促转化提升", "活动日增幅"]
+    unit: "%"
+    status: "PUBLISHED"
+    gold_sql_id: ["tm_010"]
+    note: "大促日 = 数据集 max_dt（本数据集不含双11）；日期由 params 注入，禁止 LLM 自行推断『前7天』；无数据时返回 REFUSE 而非 0"
+
+# ------------------------------------------------------------
+# 4. 术语表（对应 SuperSonic TermResp / SQLBot terminology）
+#    每个术语必须绑定 related_metrics，避免 LLM 自行理解
+# ------------------------------------------------------------
+terms:
+  - name: "转化率"
+    description: "默认指按人去重、按天计算的成交人数/访问人数"
+    aliases: ["转化", "购买转化率", "下单转化率"]
+    related_metrics: ["conversion_rate"]
+    related_dimensions: ["dt", "category_id"]
+    disambiguation: "若用户强调『按次数』，改用 conversion_rate_by_action，并在回答中说明口径差异"
+
+  - name: "成交"
+    description: "口径上区分人数与笔数，不可互换"
+    aliases: ["购买", "下单", "销量"]
+    related_metrics: ["buy_users", "buy_cnt"]
+    related_dimensions: ["dt", "category_id"]
+    disambiguation: "问『多少人』用 buy_users，问『多少单/多少件』用 buy_cnt"
+
+  - name: "加购未购"
+    description: "session 内加购但未成交的用户"
+    aliases: ["加购未转化", "购物车流失", "弃购"]
+    related_metrics: ["cart_no_buy_users", "cart_to_buy_rate"]
+    related_dimensions: ["dt", "category_id"]
+
+  - name: "大促"
+    description: "本数据集的大促日 = 数据集最后一天（max_dt），实际覆盖 2017-11-25 ~ 2017-12-03"
+    aliases: ["活动日", "大促当天", "最后一天", "大促日"]
+    related_metrics: ["promo_conversion_lift", "conversion_rate"]
+    related_dimensions: ["is_promo_day"]
+    disambiguation: "数据不含双11/双12；用户明确问具体大促日（11-11、12-12）时应说明数据不覆盖，并给出活动日(max_dt)的结果作为替代"
+
+  - name: "黄金时段"
+    description: "晚 8~10 点，时段分布类问题默认关注"
+    aliases: ["晚间高峰", "晚上八九点", "晚高峰"]
+    related_metrics: ["pv", "buy_cnt"]
+    related_dimensions: ["hour"]
+
+  - name: "高价值用户"
+    description: "RFM 三要素均达阈值的用户分层"
+    aliases: ["核心用户", "高价值客户", "VIP 用户"]
+    related_metrics: ["high_value_users"]
+    related_dimensions: ["rfm_segment"]
+
+  - name: "活跃用户"
+    description: "当日有任意行为（浏览/加购/收藏/购买）的去重用户"
+    aliases: ["访问用户", "UV", "日活"]
+    related_metrics: ["uv"]
+    related_dimensions: ["dt"]
+
+# ------------------------------------------------------------
+# 5. 拒答边界（对应评测集 no_answer_20，正确行为是 REFUSE 而非编造）
+# ------------------------------------------------------------
+no_answer:
+  - topic: "金额类指标"
+    examples: ["上个月退款金额是多少", "GMV 是多少", "客单价多少", "销售额 Top 类目"]
+    reason: "UserBehavior 只有行为类型，无价格/金额/退款字段"
+    behavior: "REFUSE"
+    reply_template: "当前数据集是行为日志，没有金额与退款字段，无法计算金额类指标。可以改用『成交笔数』或『成交人数』，需要的话我按类目拆一下。"
+
+  - topic: "用户属性"
+    examples: ["男性用户占比", "25 岁以下用户有多少", "各省用户分布"]
+    reason: "数据集无性别/年龄/地域字段，维度表未建模"
+    behavior: "REFUSE"
+
+  - topic: "商品属性"
+    examples: ["哪个品牌卖得最好", "平均价格是多少", "库存还剩多少"]
+    reason: "只有 category_id，无品牌/价格/库存"
+    behavior: "REFUSE"
+
+  - topic: "售后与履约"
+    examples: ["退货率多少", "物流时效", "退款原因分布"]
+    reason: "无售后链路数据"
+    behavior: "REFUSE"
+
+# ------------------------------------------------------------
+# 6. 执行护栏（校验沙箱的配置源，与 validator.py 一致）
+# ------------------------------------------------------------
+guardrails:
+  only_select: true
+  forbidden_keywords: ["insert", "update", "delete", "drop", "alter", "truncate", "create", "grant"]
+  table_whitelist:
+    - "dwd_behavior_fact"
+    - "path_user_session"
+    - "dws_user_daily"
+    - "dws_category_daily"
+    - "ads_funnel_daily"
+    - "ads_rfm_segments"
+    - "ads_retention_matrix"
+    - "dim_date"
+    - "dim_category"
+    - "dim_user"
+    - "meta_dataset_range"          # 相对时间基准表，允许作为子查询使用
+  auto_limit: 1000
+  query_timeout_seconds: 15
+  max_repair_rounds: 2
+  readonly_account: true
+
+# ------------------------------------------------------------
+# 7. 上下文拼装策略（对应 SQLBot 的术语召回 + few-shot 动态注入）
+# ----------------------------------------------------
+context_policy:
+  term_recall_top_k: 5
+  term_min_similarity: 0.75
+  metric_inject_max: 8               # 单次注入指标上限，超出按相似度截断
+  fewshot_top_k: 3
+  ddl_token_budget: 1200
+  always_include: ["dataset.time_field", "guardrails"]
+
+# ------------------------------------------------------------
+# 8. 评测挂钩（指标名 -> 评测集文件；保证每条指标都有 gold 用例）
+# ----------------------------------------------------
+eval_hooks:
+  metric: "result_set_match"         # 执行准确率，不比 SQL 字符串
+  category_map:
+    traffic_40: ["uv", "pv", "cart_rate", "cart_no_buy_users"]
+    time_compare_40: ["conversion_rate", "promo_conversion_lift"]
+    segmentation_30: ["high_value_users", "repurchase_rate"]
+    path_30: ["browse_no_cart_users", "cart_to_buy_rate"]
+    ranking_40: ["buy_cnt", "pv"]
+    no_answer_20: ["REFUSE"]

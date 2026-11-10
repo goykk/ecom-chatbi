@@ -1,0 +1,470 @@
+{
+  "rounds": [
+    {
+      "total": 60,
+      "exec_cases": 50,
+      "exec_matched": 48,
+      "execution_accuracy": 0.96,
+      "refuse_cases": 10,
+      "refuse_matched": 10,
+      "refusal_accuracy": 1.0,
+      "overall_accuracy": 0.9667,
+      "first_pass_rate": 0.96,
+      "error_rate": 0.0,
+      "avg_latency_ms": 1198.7,
+      "p95_latency_ms": 2100.9,
+      "by_category": {
+        "traffic": {
+          "total": 11,
+          "matched": 11,
+          "accuracy": 1.0
+        },
+        "time_compare": {
+          "total": 12,
+          "matched": 11,
+          "accuracy": 0.9167
+        },
+        "segmentation": {
+          "total": 9,
+          "matched": 9,
+          "accuracy": 1.0
+        },
+        "ranking": {
+          "total": 9,
+          "matched": 8,
+          "accuracy": 0.8889
+        },
+        "path": {
+          "total": 9,
+          "matched": 9,
+          "accuracy": 1.0
+        },
+        "no_answer": {
+          "total": 10,
+          "matched": 10,
+          "accuracy": 1.0
+        }
+      }
+    },
+    {
+      "total": 60,
+      "exec_cases": 50,
+      "exec_matched": 48,
+      "execution_accuracy": 0.96,
+      "refuse_cases": 10,
+      "refuse_matched": 10,
+      "refusal_accuracy": 1.0,
+      "overall_accuracy": 0.9667,
+      "first_pass_rate": 0.96,
+      "error_rate": 0.0,
+      "avg_latency_ms": 1251.6,
+      "p95_latency_ms": 2185.7,
+      "by_category": {
+        "traffic": {
+          "total": 11,
+          "matched": 11,
+          "accuracy": 1.0
+        },
+        "time_compare": {
+          "total": 12,
+          "matched": 11,
+          "accuracy": 0.9167
+        },
+        "segmentation": {
+          "total": 9,
+          "matched": 9,
+          "accuracy": 1.0
+        },
+        "ranking": {
+          "total": 9,
+          "matched": 8,
+          "accuracy": 0.8889
+        },
+        "path": {
+          "total": 9,
+          "matched": 9,
+          "accuracy": 1.0
+        },
+        "no_answer": {
+          "total": 10,
+          "matched": 10,
+          "accuracy": 1.0
+        }
+      }
+    },
+    {
+      "total": 60,
+      "exec_cases": 50,
+      "exec_matched": 48,
+      "execution_accuracy": 0.96,
+      "refuse_cases": 10,
+      "refuse_matched": 10,
+      "refusal_accuracy": 1.0,
+      "overall_accuracy": 0.9667,
+      "first_pass_rate": 0.96,
+      "error_rate": 0.0,
+      "avg_latency_ms": 1203.3,
+      "p95_latency_ms": 1971.9,
+      "by_category": {
+        "traffic": {
+          "total": 11,
+          "matched": 11,
+          "accuracy": 1.0
+        },
+        "time_compare": {
+          "total": 12,
+          "matched": 11,
+          "accuracy": 0.9167
+        },
+        "segmentation": {
+          "total": 9,
+          "matched": 9,
+          "accuracy": 1.0
+        },
+        "ranking": {
+          "total": 9,
+          "matched": 8,
+          "accuracy": 0.8889
+        },
+        "path": {
+          "total": 9,
+          "matched": 9,
+          "accuracy": 1.0
+        },
+        "no_answer": {
+          "total": 10,
+          "matched": 10,
+          "accuracy": 1.0
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "execution_accuracy": {
+      "mean": 0.96,
+      "std": 0.0,
+      "min": 0.96,
+      "max": 0.96
+    },
+    "refusal_accuracy": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "overall_accuracy": {
+      "mean": 0.9667,
+      "std": 0.0,
+      "min": 0.9667,
+      "max": 0.9667
+    },
+    "latency_ms": {
+      "mean": 1217.8667,
+      "std": 23.9269,
+      "min": 1198.7,
+      "max": 1251.6
+    }
+  },
+  "per_case": {
+    "tc_001": [
+      true,
+      true,
+      true
+    ],
+    "tc_002": [
+      true,
+      true,
+      true
+    ],
+    "tc_003": [
+      true,
+      true,
+      true
+    ],
+    "tc_004": [
+      true,
+      true,
+      true
+    ],
+    "tc_005": [
+      true,
+      true,
+      true
+    ],
+    "tm_001": [
+      true,
+      true,
+      true
+    ],
+    "tm_002": [
+      true,
+      true,
+      true
+    ],
+    "tm_003": [
+      true,
+      true,
+      true
+    ],
+    "tm_004": [
+      true,
+      true,
+      true
+    ],
+    "sg_001": [
+      true,
+      true,
+      true
+    ],
+    "sg_002": [
+      true,
+      true,
+      true
+    ],
+    "sg_003": [
+      true,
+      true,
+      true
+    ],
+    "rk_001": [
+      true,
+      true,
+      true
+    ],
+    "rk_002": [
+      false,
+      false,
+      false
+    ],
+    "rk_003": [
+      true,
+      true,
+      true
+    ],
+    "pa_001": [
+      true,
+      true,
+      true
+    ],
+    "pa_002": [
+      true,
+      true,
+      true
+    ],
+    "pa_003": [
+      true,
+      true,
+      true
+    ],
+    "na_001": [
+      true,
+      true,
+      true
+    ],
+    "na_002": [
+      true,
+      true,
+      true
+    ],
+    "na_003": [
+      true,
+      true,
+      true
+    ],
+    "tc_006": [
+      true,
+      true,
+      true
+    ],
+    "tc_007": [
+      true,
+      true,
+      true
+    ],
+    "tc_008": [
+      true,
+      true,
+      true
+    ],
+    "tc_009": [
+      true,
+      true,
+      true
+    ],
+    "tc_010": [
+      true,
+      true,
+      true
+    ],
+    "tc_011": [
+      true,
+      true,
+      true
+    ],
+    "tm_005": [
+      true,
+      true,
+      true
+    ],
+    "tm_006": [
+      true,
+      true,
+      true
+    ],
+    "tm_007": [
+      true,
+      true,
+      true
+    ],
+    "tm_008": [
+      true,
+      true,
+      true
+    ],
+    "tm_009": [
+      false,
+      false,
+      false
+    ],
+    "tm_010": [
+      true,
+      true,
+      true
+    ],
+    "tm_011": [
+      true,
+      true,
+      true
+    ],
+    "tm_012": [
+      true,
+      true,
+      true
+    ],
+    "sg_004": [
+      true,
+      true,
+      true
+    ],
+    "sg_005": [
+      true,
+      true,
+      true
+    ],
+    "sg_006": [
+      true,
+      true,
+      true
+    ],
+    "sg_007": [
+      true,
+      true,
+      true
+    ],
+    "sg_008": [
+      true,
+      true,
+      true
+    ],
+    "sg_009": [
+      true,
+      true,
+      true
+    ],
+    "rk_004": [
+      true,
+      true,
+      true
+    ],
+    "rk_005": [
+      true,
+      true,
+      true
+    ],
+    "rk_006": [
+      true,
+      true,
+      true
+    ],
+    "rk_007": [
+      true,
+      true,
+      true
+    ],
+    "rk_008": [
+      true,
+      true,
+      true
+    ],
+    "rk_009": [
+      true,
+      true,
+      true
+    ],
+    "pa_004": [
+      true,
+      true,
+      true
+    ],
+    "pa_005": [
+      true,
+      true,
+      true
+    ],
+    "pa_006": [
+      true,
+      true,
+      true
+    ],
+    "pa_007": [
+      true,
+      true,
+      true
+    ],
+    "pa_008": [
+      true,
+      true,
+      true
+    ],
+    "pa_009": [
+      true,
+      true,
+      true
+    ],
+    "na_004": [
+      true,
+      true,
+      true
+    ],
+    "na_005": [
+      true,
+      true,
+      true
+    ],
+    "na_006": [
+      true,
+      true,
+      true
+    ],
+    "na_007": [
+      true,
+      true,
+      true
+    ],
+    "na_008": [
+      true,
+      true,
+      true
+    ],
+    "na_009": [
+      true,
+      true,
+      true
+    ],
+    "na_010": [
+      true,
+      true,
+      true
+    ]
+  }
+}
