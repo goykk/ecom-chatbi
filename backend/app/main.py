@@ -9,9 +9,12 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from app.analysis.followup import FollowupResolver
@@ -106,3 +109,13 @@ async def health(request: Request) -> dict:
 
 app.include_router(query_router)
 app.include_router(meta_router)
+
+# 前端：零构建单页，由后端直接托管，避免额外的 CORS 与部署步骤。
+# 目录在 backend/frontend，随 ../backend:/app 一起挂载进容器。
+FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
+if FRONTEND_DIR.is_dir():
+    app.mount("/ui", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="ui")
+
+    @app.get("/", include_in_schema=False)
+    async def index() -> RedirectResponse:
+        return RedirectResponse("/ui/")

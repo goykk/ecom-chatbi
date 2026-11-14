@@ -92,6 +92,9 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
       LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      # openai = DeepSeek/Qwen 等兼容接口；ollama = 本地模型（需 LLM_THINK=0）
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_THINK: ${LLM_THINK:-0}
       # 默认哈希向量：不联网、不加载模型；需要更强召回时设为 bge
       EMBEDDER: ${EMBEDDER:-hashing}
       EMBEDDER_MODEL: ${EMBEDDER_MODEL:-BAAI/bge-m3}

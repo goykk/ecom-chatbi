@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电商 ChatBI · 智能问数</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<style>
+:root{
+  --bg:#0b0e14; --panel:#12161f; --panel-2:#171c27; --line:#232a38;
+  --text:#e8ecf3; --muted:#8b97a8; --dim:#5f6b7d;
+  --accent:#4f8cff; --accent-soft:rgba(79,140,255,.12);
+  --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+  --radius:12px;
+  --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+
+/* ---------- 顶栏 ---------- */
+header{
+  position:sticky;top:0;z-index:20;
+  display:flex;align-items:center;gap:16px;
+  padding:14px 24px;border-bottom:1px solid var(--line);
+  background:rgba(11,14,20,.86);backdrop-filter:blur(10px);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.2px}
+.brand .mark{
+  width:26px;height:26px;border-radius:8px;
+  background:linear-gradient(135deg,#4f8cff,#22d3ee);
+  display:grid;place-items:center;font-size:13px;font-weight:700;color:#08111f;
+}
+.brand small{color:var(--muted);font-weight:400;font-size:12px;margin-left:2px}
+.status{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px;border:1px solid var(--line);border-radius:999px;
+  font-size:12px;color:var(--muted);background:var(--panel);
+}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--dim)}
+.dot.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(52,211,153,.15)}
+.dot.bad{background:var(--err);box-shadow:0 0 0 3px rgba(248,113,113,.15)}
+
+/* ---------- 布局 ---------- */
+.wrap{display:grid;grid-template-columns:290px minmax(0,1fr);gap:20px;padding:20px 24px 48px;max-width:1440px;margin:0 auto}
+@media(max-width:960px){.wrap{grid-template-columns:1fr}}
+
+/* ---------- 侧栏 ---------- */
+aside{display:flex;flex-direction:column;gap:16px;position:sticky;top:78px;align-self:start}
+@media(max-width:960px){aside{position:static}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+.card h3{margin:0;padding:13px 16px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.examples{padding:8px;display:flex;flex-direction:column;gap:2px;max-height:52vh;overflow:auto}
+.examples .grp{padding:8px 8px 4px;font-size:11px;color:var(--dim);letter-spacing:.05em}
+.ex{
+  text-align:left;background:transparent;border:0;border-radius:8px;
+  padding:7px 9px;color:#c7cfdc;font-size:13px;line-height:1.45;
+  transition:background .12s,color .12s;
+}
+.ex:hover{background:var(--panel-2);color:#fff}
+.meta-stats{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat b{display:block;font-size:19px;font-weight:650;letter-spacing:-.02em}
+.stat span{font-size:11px;color:var(--muted)}
+.link-btn{
+  width:100%;background:transparent;border:0;border-top:1px solid var(--line);
+  padding:11px 16px;color:var(--accent);font-size:12.5px;text-align:left;
+}
+.link-btn:hover{background:var(--panel-2)}
+
+/* ---------- 输入 ---------- */
+.ask{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;transition:border-color .15s,box-shadow .15s}
+.ask:focus-within{border-color:rgba(79,140,255,.5);box-shadow:0 0 0 3px var(--accent-soft)}
+.ask textarea{
+  width:100%;min-height:56px;max-height:180px;resize:vertical;
+  background:transparent;border:0;outline:0;font-size:15px;line-height:1.6;
+}
+.ask textarea::placeholder{color:var(--dim)}
+.ask-bar{display:flex;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.opt{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.opt select{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:3px 6px;font-size:12px}
+.opt input[type=checkbox]{accent-color:var(--accent)}
+.send{
+  margin-left:auto;background:var(--accent);color:#06101f;border:0;border-radius:9px;
+  padding:8px 20px;font-weight:600;font-size:13.5px;transition:filter .15s,opacity .15s;
+}
+.send:hover{filter:brightness(1.08)}
+.send:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:11.5px;color:var(--dim);margin-top:8px}
+
+/* ---------- 结果 ---------- */
+.results{display:flex;flex-direction:column;gap:16px;margin-top:16px}
+.blk{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;animation:in .22s ease-out}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.blk-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.blk-h .right{margin-left:auto;display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0}
+.blk-b{padding:16px}
+
+/* 链路 */
+.stages{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.stage{display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--dim);background:var(--panel-2)}
+.stage.on{border-color:rgba(79,140,255,.6);color:#cfe0ff;background:var(--accent-soft)}
+.stage.done{border-color:rgba(52,211,153,.45);color:#a7f3d0}
+.stage .sp{width:5px;height:5px;border-radius:50%;background:currentColor}
+.arrow{color:var(--dim);font-size:12px}
+
+/* SQL */
+pre.sql{
+  margin:0;padding:14px 16px;background:#0d111a;border-radius:0;
+  font-family:var(--mono);font-size:12.5px;line-height:1.7;
+  color:#b9d4ff;white-space:pre-wrap;word-break:break-word;
+}
+.copy{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-size:11.5px;color:var(--muted)}
+.copy:hover{color:var(--text);border-color:#34405a}
+
+/* KPI */
+.kpi{display:flex;flex-direction:column;gap:4px;padding:22px 18px}
+.kpi .v{font-size:36px;font-weight:680;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+
+/* 表格 */
+.tbl-wrap{max-height:420px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel-2);font-weight:600;font-size:11.5px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;z-index:1}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+tbody tr:hover{background:rgba(79,140,255,.05)}
+
+/* 提示条 */
+.note{display:flex;gap:10px;padding:14px 16px;border-radius:var(--radius);font-size:13.5px;line-height:1.6}
+.note.refuse{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.28);color:#fde68a}
+.note.error{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.28);color:#fecaca}
+.note .tag{font-weight:600;flex:none}
+.insight p{margin:0 0 10px;color:#c9d2e0;line-height:1.75}
+.insight p:last-child{margin:0}
+
+/* 图表 */
+.chart{width:100%;height:340px}
+.loading{display:flex;align-items:center;gap:10px;padding:22px 16px;color:var(--muted);font-size:13px}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{padding:40px;text-align:center;color:var(--dim);font-size:13px}
+
+/* 抽屉 */
+.drawer-mask{position:fixed;inset:0;background:rgba(4,7,12,.6);backdrop-filter:blur(2px);display:none;z-index:40}
+.drawer-mask.show{display:block}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(620px,92vw);z-index:41;
+  background:var(--panel);border-left:1px solid var(--line);
+  transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;
+}
+.drawer.show{transform:none}
+.drawer-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.drawer-h h2{margin:0;font-size:15px;font-weight:600}
+.tabs{display:flex;gap:4px;padding:12px 20px 0;border-bottom:1px solid var(--line)}
+.tab{background:transparent;border:0;border-bottom:2px solid transparent;padding:8px 12px;font-size:13px;color:var(--muted)}
+.tab.on{color:var(--text);border-bottom-color:var(--accent)}
+.drawer-b{flex:1;overflow:auto;padding:16px 20px 40px}
+.metric{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--panel-2)}
+.metric .n{font-weight:600;font-size:13.5px}
+.metric .b{font-family:var(--mono);font-size:11.5px;color:var(--accent);margin-left:6px}
+.metric .d{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.6}
+.metric .c{margin-top:8px;padding:7px 10px;border-radius:7px;background:rgba(251,191,36,.07);border-left:2px solid rgba(251,191,36,.5);color:#e5d3a3;font-size:12px;line-height:1.6}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark">BI</div>
+    电商 ChatBI
+    <small>NL2SQL · 语义层</small>
+  </div>
+  <div class="status">
+    <span class="badge"><i class="dot" id="dot-api"></i><span id="st-api">连接中</span></span>
+    <span class="badge"><i class="dot" id="dot-db"></i><span id="st-db">数据库</span></span>
+    <span class="badge" id="st-model">模型 —</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <aside>
+    <div class="card">
+      <h3>示例问题</h3>
+      <div class="examples" id="examples"></div>
+    </div>
+    <div class="card">
+      <h3>语义层</h3>
+      <div class="meta-stats">
+        <div class="stat"><b id="m-metrics">—</b><span>指标</span></div>
+        <div class="stat"><b id="m-dims">—</b><span>维度</span></div>
+        <div class="stat"><b id="m-terms">—</b><span>术语</span></div>
+        <div class="stat"><b id="m-una">—</b><span>不支持项</span></div>
+      </div>
+      <button class="link-btn" id="open-drawer">查看指标口径与维度映射 →</button>
+    </div>
+  </aside>
+
+  <section>
+    <div class="ask">
+      <label class="sr-only" for="q">问题</label>
+      <textarea id="q" placeholder="用中文问一个业务问题，例如：活动日成交笔数最多的 3 个类目"></textarea>
+      <div class="ask-bar">
+        <span class="opt">示例数
+          <select id="fewshot">
+            <option value="3" selected>3</option>
+            <option value="1">1</option>
+            <option value="0">0</option>
+          </select>
+        </span>
+        <span class="opt"><input type="checkbox" id="insight"> 生成归因解读</span>
+        <button class="send" id="send">提问</button>
+      </div>
+      <div class="hint">Enter 发送 · Shift + Enter 换行 · 结果以 SSE 流式返回</div>
+    </div>
+
+    <div class="results" id="results">
+      <div class="card"><div class="empty">还没有查询结果。点击左侧示例或直接提问开始。</div></div>
+    </div>
+  </section>
+</div>
+
+<div class="drawer-mask" id="mask"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-h">
+    <h2>语义层</h2>
+    <button class="copy" id="close-drawer" style="margin-left:auto">关闭</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="metrics">指标</button>
+    <button class="tab" data-tab="dimensions">维度</button>
+    <button class="tab" data-tab="terms">术语</button>
+    <button class="tab" data-tab="unavailable">不支持</button>
+  </div>
+  <div class="drawer-b" id="drawer-body"><div class="empty">选择一个标签查看</div></div>
+</aside>
+
+<script>
+const API = "";
+const $ = (id) => document.getElementById(id);
+const state = { chart: null, meta: {}, tab: "metrics", busy: false };
+
+/* ---------------- 示例问题 ---------------- */
+const EXAMPLES = [
+  ["流量", "昨天有多少人访问"],
+  ["流量", "活动日加购人数和成交人数分别是多少"],
+  ["时间对比", "活动日当天和平销期前 7 天的访问人数对比"],
+  ["时间对比", "活动日成交笔数比前 7 天日均高多少（相对提升幅度）"],
+  ["分群", "RFM 分层里各类目有多少人"],
+  ["路径", "整个周期加购未购人数占加购人数的比例是多少"],
+  ["路径", "活动日先加购后成交的用户有多少人"],
+  ["排名", "活动日成交笔数最多的 3 个类目"],
+  ["排名", "整个周期浏览次数最多的 5 个商品"],
+  ["拒答", "昨天各渠道的退货率是多少"],
+  ["拒答", "按支付方式统计成交金额"]
+];
+function renderExamples() {
+  const box = $("examples");
+  let last = "";
+  box.innerHTML = "";
+  for (const [grp, q] of EXAMPLES) {
+    if (grp !== last) {
+      const g = document.createElement("div");
+      g.className = "grp"; g.textContent = grp;
+      box.appendChild(g); last = grp;
+    }
+    const b = document.createElement("button");
+    b.className = "ex"; b.textContent = q;
+    b.onclick = () => { $("q").value = q; ask(); };
+    box.appendChild(b);
+  }
+}
+
+/* ---------------- 健康检查 ---------------- */
+async function checkHealth() {
+  try {
+    const r = await fetch(API + "/health");
+    const d = await r.json();
+    $("dot-api").className = "dot ok";
+    $("st-api").textContent = "服务正常 v" + (d.version || "");
+    const dbOk = String(d.database) === "ok";
+    $("dot-db").className = "dot " + (dbOk ? "ok" : "bad");
+    $("st-db").textContent = dbOk ? "数据库正常" : "数据库异常";
+    $("st-model").textContent = "模型 " + (d.model || "—");
+    if (d.semantic) {
+      $("m-metrics").textContent = d.semantic.metrics ?? "—";
+      $("m-dims").textContent = d.semantic.dimensions ?? "—";
+      $("m-terms").textContent = d.semantic.terms ?? "—";
+    }
+  } catch (e) {
+    $("dot-api").className = "dot bad";
+    $("st-api").textContent = "连接失败";
+  }
+}
+
+/* ---------------- 问数主流程 ---------------- */
+async function ask() {
+  const q = $("q").value.trim();
+  if (!q || state.busy) return;
+  state.busy = true;
+  $("send").disabled = true;
+  const results = $("results");
+  results.innerHTML = "";
+
+  const t0 = performance.now();
+  const stageBox = el("div", "blk");
+  stageBox.innerHTML = `<div class="blk-h">执行链路</div><div class="blk-b"><div class="stages" id="stages">
+    ${stageHtml("召回", "recall")}<span class="arrow">›</span>
+    ${stageHtml("生成", "gen")}<span class="arrow">›</span>
+    ${stageHtml("校验", "verify")}<span class="arrow">›</span>
+    ${stageHtml("执行", "exec")}
+  </div></div>`;
+  results.appendChild(stageBox);
+
+  const sqlBox = el("div", "blk"); sqlBox.style.display = "none";
+  const noteBox = el("div", "blk"); noteBox.style.display = "none";
+  const chartBox = el("div", "blk");
+  chartBox.innerHTML = `<div class="blk-h">可视化</div><div class="blk-b"><div class="loading"><i class="spin"></i>等待结果…</div></div>`;
+  const tableBox = el("div", "blk");
+  tableBox.innerHTML = `<div class="blk-h">结果集</div><div class="blk-b"><div class="loading"><i class="spin"></i>等待结果…</div></div>`;
+  const insightBox = el("div", "blk"); insightBox.style.display = "none";
+  results.append(sqlBox, noteBox, chartBox, tableBox, insightBox);
+
+  try {
+    const res = await fetch(API + "/api/v1/query/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question: q,
+        fewshot_k: parseInt($("fewshot").value, 10),
+        with_insight: $("insight").checked
+      })
+    });
+    if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const raw = buf.slice(0, i); buf = buf.slice(i + 2);
+        handleEvent(raw, { sqlBox, noteBox, chartBox, tableBox, insightBox, t0 });
+      }
+    }
+  } catch (e) {
+    showNote(noteBox, "error", "请求失败", e.message || String(e));
+  } finally {
+    state.busy = false;
+    $("send").disabled = false;
+    setStage("exec", "done");
+  }
+}
+
+function handleEvent(raw, ctx) {
+  let ev = "message", data = "";
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("event:")) ev = line.slice(6).trim();
+    else if (line.startsWith("data:")) data += line.slice(5).trim();
+  }
+  let d = {};
+  try { d = JSON.parse(data || "{}"); } catch { return; }
+
+  if (ev === "status") {
+    const s = d.stage;
+    if (s === "recall") { setStage("recall", "done"); setStage("gen", "on"); }
+    if (s === "done") { setStage("gen", "done"); setStage("verify", "done"); setStage("exec", "done"); }
+  } else if (ev === "sql") {
+    setStage("gen", "done"); setStage("verify", "on");
+    renderSQL(ctx.sqlBox, d.sql, d.attempts);
+    setStage("verify", "done"); setStage("exec", "on");
+  } else if (ev === "refuse") {
+    setStage("exec", "done");
+    showNote(ctx.noteBox, "refuse", "已拒答", d.reason || "问题超出当前数据与口径范围");
+    ctx.chartBox.style.display = "none"; ctx.tableBox.style.display = "none";
+  } else if (ev === "error") {
+    showNote(ctx.noteBox, "error", "执行失败", d.message || "未知错误");
+    ctx.chartBox.style.display = "none"; ctx.tableBox.style.display = "none";
+  } else if (ev === "rows") {
+    renderTable(ctx.tableBox, d.columns || [], d.rows || []);
+  } else if (ev === "chart") {
+    renderChart(ctx.chartBox, d);
+  } else if (ev === "insight") {
+    renderInsight(ctx.insightBox, d);
+  } else if (ev === "done") {
+    const ms = Math.round(performance.now() - ctx.t0);
+    appendTrace(ctx.tableBox, d, ms);
+  }
+}
+
+/* ---------------- 渲染 ---------------- */
+function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+function stageHtml(label, key) { return `<span class="stage" data-k="${key}"><i class="sp"></i>${label}</span>`; }
+function setStage(key, mode) {
+  const n = document.querySelector(`.stage[data-k="${key}"]`);
+  if (!n) return;
+  n.classList.remove("on", "done");
+  if (mode) n.classList.add(mode);
+}
+
+function renderSQL(box, sql, attempts) {
+  if (!sql) return;
+  box.style.display = "";
+  box.innerHTML = `<div class="blk-h">生成的 SQL<span class="right">
+      <span>修复 ${attempts || 0} 次</span>
+      <button class="copy" data-copy>复制</button></span></div>
+    <pre class="sql">${esc(sql)}</pre>`;
+  box.querySelector("[data-copy]").onclick = (e) => {
+    navigator.clipboard.writeText(sql).then(() => {
+      e.target.textContent = "已复制";
+      setTimeout(() => (e.target.textContent = "复制"), 1200);
+    });
+  };
+}
+
+function showNote(box, kind, tag, text) {
+  box.style.display = "";
+  box.innerHTML = `<div class="blk-b" style="padding:0">
+    <div class="note ${kind}"><span class="tag">${esc(tag)}</span><span>${esc(text)}</span></div></div>`;
+}
+
+function renderTable(box, cols, rows) {
+  box.style.display = "";
+  if (!rows.length) {
+    box.innerHTML = `<div class="blk-h">结果集</div><div class="empty">查询成功，但没有匹配的数据</div>`;
+    return;
+  }
+  const shown = rows.slice(0, 200);
+  const head = cols.map((c) => `<th>${esc(c)}</th>`).join("");
+  const body = shown.map((r) => "<tr>" + cols.map((c) => {
+    const v = r[c];
+    const num = typeof v === "number";
+    return `<td class="${num ? "num" : ""}">${num ? fmt(v) : esc(v == null ? "—" : v)}</td>`;
+  }).join("") + "</tr>").join("");
+  box.innerHTML = `<div class="blk-h">结果集
+      <span class="right">${rows.length} 行${rows.length > 200 ? " · 仅显示前 200" : ""}</span></div>
+    <div class="tbl-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function appendTrace(box, d, ms) {
+  const t = d.timings_ms || {};
+  const parts = Object.entries(t).map(([k, v]) => `${k} ${Math.round(v)}ms`);
+  const info = el("div");
+  info.style.cssText = "padding:10px 16px;border-top:1px solid var(--line);color:var(--dim);font-size:11.5px;font-family:var(--mono)";
+  info.textContent = `总耗时 ${ms}ms` + (parts.length ? " · " + parts.join(" · ") : "") +
+    (d.trace_id ? " · trace " + d.trace_id : "");
+  box.appendChild(info);
+}
+
+function renderChart(box, spec) {
+  if (!spec || !spec.chart_type || spec.chart_type === "empty") { box.style.display = "none"; return; }
+  box.style.display = "";
+  const title = spec.title || "可视化";
+  const reason = spec.reason ? `<div style="color:var(--dim);font-size:11.5px;margin-top:6px">${esc(spec.reason)}</div>` : "";
+
+  if (spec.chart_type === "metric_card") {
+    const o = spec.option || {};
+    box.innerHTML = `<div class="blk-h">指标卡</div><div class="kpi">
+      <div class="v">${fmt(o.value)}</div><div class="l">${esc(o.label || "")}</div></div>${reason}`;
+    return;
+  }
+  if (spec.chart_type === "table" || !window.echarts) {
+    box.style.display = "none";
+    return;
+  }
+  box.innerHTML = `<div class="blk-h">可视化<span class="right">${esc(spec.chart_type)}</span></div>
+    <div class="blk-b"><div class="chart" id="chart-dom"></div>${reason}</div>`;
+  requestAnimationFrame(() => {
+    const dom = $("chart-dom");
+    if (!dom) return;
+    if (state.chart) { state.chart.dispose(); state.chart = null; }
+    const opt = Object.assign({
+      backgroundColor: "transparent",
+      textStyle: { color: "#c9d2e0" },
+      tooltip: { trigger: "axis", backgroundColor: "#171c27", borderColor: "#232a38", textStyle: { color: "#e8ecf3" } },
+      grid: { left: 48, right: 24, top: 36, bottom: 40 }
+    }, spec.option || {});
+    if (opt.xAxis && !opt.xAxis.axisLabel) opt.xAxis.axisLabel = { color: "#8b97a8" };
+    if (opt.yAxis && !opt.yAxis.axisLabel) opt.yAxis.axisLabel = { color: "#8b97a8" };
+    if (opt.legend) opt.legend = Object.assign({ textStyle: { color: "#8b97a8" }, top: 0 }, opt.legend);
+    state.chart = echarts.init(dom, null, { renderer: "canvas" });
+    state.chart.setOption(opt);
+  });
+}
+
+function renderInsight(box, d) {
+  const text = typeof d === "string" ? d : (d.insight || d.text || "");
+  if (!text) { box.style.display = "none"; return; }
+  box.style.display = "";
+  const html = String(text).split(/\n+/).filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join("");
+  box.innerHTML = `<div class="blk-h">归因解读</div><div class="blk-b insight">${html}</div>`;
+}
+
+/* ---------------- 语义层抽屉 ---------------- */
+async function openDrawer() {
+  $("mask").classList.add("show");
+  $("drawer").classList.add("show");
+  await loadTab(state.tab);
+}
+function closeDrawer() {
+  $("mask").classList.remove("show");
+  $("drawer").classList.remove("show");
+}
+async function loadTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab === tab));
+  const body = $("drawer-body");
+  body.innerHTML = `<div class="empty">加载中…</div>`;
+  try {
+    const r = await fetch(API + "/api/v1/" + tab);
+    const d = await r.json();
+    if (tab === "metrics") {
+      body.innerHTML = d.map((m) => `<div class="metric">
+        <div><span class="n">${esc(m.name)}</span><span class="b">${esc(m.biz_name)}</span></div>
+        <div class="d">${esc(m.description || "")}${m.unit ? " · 单位 " + esc(m.unit) : ""}</div>
+        ${m.formula ? `<div class="d" style="font-family:var(--mono);color:#9db4d6">${esc(m.formula)}</div>` : ""}
+        ${m.caveat ? `<div class="c">${esc(m.caveat)}</div>` : ""}
+      </div>`).join("") || `<div class="empty">无数据</div>`;
+    } else if (tab === "dimensions") {
+      body.innerHTML = d.map((x) => `<div class="metric">
+        <div><span class="n">${esc(x.name)}</span><span class="b">${esc(x.biz_name)}</span></div>
+        <div class="d">别名：${esc((x.aliases || []).join(" / ") || "—")}</div>
+        ${(x.value_maps || []).length ? `<div class="c">枚举映射 ${x.value_maps.length} 组：${esc(x.value_maps.slice(0, 6).map(v => (v.labels || []).join("/")).join("、"))}</div>` : ""}
+      </div>`).join("") || `<div class="empty">无数据</div>`;
+    } else if (tab === "terms") {
+      body.innerHTML = d.map((t) => `<div class="metric">
+        <div class="n">${esc(t.term || t.name || JSON.stringify(t))}</div>
+        <div class="d">${esc(t.definition || t.desc || t.description || "")}</div>
+      </div>`).join("") || `<div class="empty">无数据</div>`;
+    } else {
+      body.innerHTML = d.map((x) => `<div class="metric">
+        <div class="n">${esc(x.name || x.topic || "")}</div>
+        <div class="d">${esc(x.reason || x.description || "")}</div>
+      </div>`).join("") || `<div class="empty">无数据</div>`;
+    }
+  } catch (e) {
+    body.innerHTML = `<div class="empty">加载失败：${esc(e.message || e)}</div>`;
+  }
+}
+
+/* ---------------- 工具 ---------------- */
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function fmt(v) {
+  if (v == null) return "—";
+  if (typeof v !== "number") return esc(v);
+  if (Number.isInteger(v)) return v.toLocaleString("zh-CN");
+  return v.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
+}
+
+/* ---------------- 事件绑定 ---------------- */
+$("send").onclick = ask;
+$("q").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(); }
+});
+$("open-drawer").onclick = openDrawer;
+$("close-drawer").onclick = closeDrawer;
+$("mask").onclick = closeDrawer;
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest(".tab");
+  if (b) loadTab(b.dataset.tab);
+});
+window.addEventListener("resize", () => state.chart && state.chart.resize());
+
+renderExamples();
+checkHealth();
+fetch(API + "/api/v1/unavailable").then((r) => r.json()).then((d) => {
+  $("m-una").textContent = Array.isArray(d) ? d.length : "—";
+}).catch(() => {});
+</script>
+</body>
+</html>
